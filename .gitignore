@@ -2,3 +2,5 @@ xpander_config.json
 .env
 sandboxes
 sandboxes/*
+__pycache__
+.DS_Store
