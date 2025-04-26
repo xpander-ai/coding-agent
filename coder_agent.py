@@ -20,7 +20,7 @@ AWS_PROFILE = environ.get("AWS_PROFILE")
 AWS_REGION = "us-west-2"
 MODEL_ID = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
 
-class CoderAgent:
+class CodingAgent:
     """Agent handling Bedrock interaction"""
 
     def __init__(self, agent: Agent):

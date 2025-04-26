@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from xpander_sdk import XpanderClient, Agent, Execution
 from xpander_utils.events import AgentExecution
-from coder_agent import CoderAgent
+from coder_agent import CodingAgent
 # Setup
 load_dotenv()
 XPANDER_API_KEY = os.environ.get("XPANDER_API_KEY")
@@ -103,4 +103,4 @@ def get_agent():
 
 def run_task(agent: Agent, execution_task: AgentExecution) -> Execution:
     agent.init_task(execution=execution_task.model_dump())    
-    return CoderAgent(agent=agent)._agent_loop()
+    return CodingAgent(agent=agent)._agent_loop()

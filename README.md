@@ -47,11 +47,11 @@ The system consists of three main components:
 
 ```python
 from xpander_sdk import XpanderAgent
-from coder_agent import CoderAgent
+from coder_agent import CodingAgent
 
 # Initialize the agent
 agent = XpanderAgent()
-coder = CoderAgent(agent)
+coder = CodingAgent(agent)
 
 # Start a conversation
 thread_id = coder.chat("Clone the repository https://github.com/xpander-ai/docs.git and add a new tutorial")
