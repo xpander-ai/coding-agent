@@ -73,6 +73,7 @@ The sandbox implementation focuses on providing a secure, isolated environment f
 # Todo
 
 - [ ] remove the xpander.py once the CLI is ready
+- [ ] solve the duplicate local functions in the UI
 - [ ] add thread id support in the xpander_handler
 - [ ] add github and AWS auth support (Remote)
 - [ ] add Agent 2 Agent support & Agent card

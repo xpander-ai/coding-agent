@@ -9,7 +9,7 @@ if __name__ == "__main__":
     agent = get_agent() ## will come from the CLI
     coding_agent = CodingAgent(agent=agent)
     # result = run_task(AgentExecution(input="Hello, how are you?"))
-    thread = coding_agent.chat("Hi, I'm a new user to Xpander. Can you help me get started?")    
+    thread = coding_agent.chat("read the xpander-ai/docs repo and understand how to add to xpander-ai/coding-agent the tokens logging to xpander.ai feature and commit it to a new branch once you figure it out")    
     while True:
         user_input = input("You: ")
         coding_agent.chat(user_input, thread)

@@ -46,6 +46,9 @@ def edit_file(file_path: str, content: str) -> Dict[str, Any]:
     Returns:
         Dictionary with edit status and message
     """
+    # Clean the content if it's a Python file
+    if file_path.endswith('.py'):
+        content = content.replace('\\"\\"\\"', '"""')
     return sandbox.edit_file(file_path, content)
 
 def new_file(file_path: str, content: str) -> Dict[str, Any]:
@@ -59,6 +62,9 @@ def new_file(file_path: str, content: str) -> Dict[str, Any]:
     Returns:
         Dictionary with creation status and message
     """
+    # Clean the content if it's a Python file
+    if file_path.endswith('.py'):
+        content = content.replace('\\"\\"\\"', '"""')
     return sandbox.new_file(file_path, content)
 
 def read_file(file_path: str) -> Dict[str, Any]:
