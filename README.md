@@ -1,10 +1,10 @@
-# Agent Coder
+# Agent Coding
 
 A secure AI coding assistant that can clone, edit, and push changes to git repositories.
 
 ## Overview
 
-Agent Coder is a Python-based AI agent that provides secure code manipulation capabilities. It uses Claude 3.7 Sonnet through AWS Bedrock to understand user requests and execute coding tasks in an isolated sandbox environment. The agent can clone repositories, create or modify files, and commit changes back to a repository.
+Agent Coding is a Python-based AI agent that provides secure code manipulation capabilities. It uses Claude 3.7 Sonnet through AWS Bedrock to understand user requests and execute coding tasks in an isolated sandbox environment. The agent can clone repositories, create or modify files, and commit changes back to a repository.
 
 ## Features
 
@@ -17,7 +17,7 @@ Agent Coder is a Python-based AI agent that provides secure code manipulation ca
 
 The system consists of three main components:
 
-1. **Coder Agent** (`coder_agent.py`): Handles interaction with AWS Bedrock, manages the AI conversation flow, and coordinates tool execution
+1. **Coding Agent** (`coding_agent.py`): Handles interaction with AWS Bedrock, manages the AI conversation flow, and coordinates tool execution
 
 2. **Sandbox** (`sandbox.py`): Provides a secure environment for file operations with basic path security to prevent sandbox escapes
 
@@ -47,17 +47,17 @@ The system consists of three main components:
 
 ```python
 from xpander_sdk import XpanderAgent
-from coder_agent import CodingAgent
+from coding_agent import CodingAgent
 
 # Initialize the agent
 agent = XpanderAgent()
-coder = CodingAgent(agent)
+coding = CodingAgent(agent)
 
 # Start a conversation
-thread_id = coder.chat("Clone the repository https://github.com/xpander-ai/docs.git and add a new tutorial")
+thread_id = coding.chat("Clone the repository https://github.com/xpander-ai/docs.git and add a new tutorial")
 
 # Continue the conversation in the same thread
-coder.chat("Now commit these changes to a new branch called 'new-tutorial'", thread_id)
+coding.chat("Now commit these changes to a new branch called 'new-tutorial'", thread_id)
 ```
 
 ## Security

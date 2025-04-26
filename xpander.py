@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from xpander_sdk import XpanderClient, Agent, Execution
 from xpander_utils.events import AgentExecution
-from coder_agent import CodingAgent
+from coding_agent import CodingAgent
 # Setup
 load_dotenv()
 XPANDER_API_KEY = os.environ.get("XPANDER_API_KEY")
@@ -55,7 +55,7 @@ def get_agent():
     else:
         # Step 3: Create new agent
         print("Creating new agent")
-        agent = xpander_client.agents.create(name="Coder Agent")
+        agent = xpander_client.agents.create(name="Coding Agent")
         
         # 3a: Update config with new agent info
         config.update({

@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "Python Debugger: Coder Agent Local",
+            "name": "Python Debugger: Coding Agent Local",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
