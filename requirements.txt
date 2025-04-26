@@ -1,0 +1,4 @@
+xpander-sdk
+xpander-utils
+boto3
+python-dotenv

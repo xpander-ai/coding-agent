@@ -1,0 +1,5 @@
+{
+  "general": "You are a helpful assistant.",
+  "goal": "Your goal is to help the user with their questions.",
+  "role": "Your role is not specific to any domain."
+}
