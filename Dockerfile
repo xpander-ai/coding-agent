@@ -17,6 +17,7 @@ RUN apk add --no-cache \
     libffi-dev \
     musl-dev \
     openssl-dev \
+    git \
     make \
     python3-dev \
     npm \
@@ -36,4 +37,5 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Install Node.js 18
 RUN apk add --no-cache nodejs-current npm
 
+# Run your main.py script (adjust path if needed)
 CMD ["python", "xpander_handler.py"]

@@ -19,6 +19,7 @@ load_dotenv()
 AWS_PROFILE = environ.get("AWS_PROFILE")
 AWS_REGION = "us-west-2"
 MODEL_ID = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+session_token = environ.get("AWS_SESSION_TOKEN")
 
 class CodingAgent:
     """Agent handling Bedrock interaction"""
@@ -38,7 +39,8 @@ class CodingAgent:
                 "bedrock-runtime", 
                 region_name=AWS_REGION, 
                 aws_access_key_id=environ.get("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=environ.get("AWS_SECRET_ACCESS_KEY")
+                aws_secret_access_key=environ.get("AWS_SECRET_ACCESS_KEY"),
+                aws_session_token=session_token if session_token else None
             )
         
         # Configure tools
@@ -68,8 +70,8 @@ class CodingAgent:
         """Run the agent interaction loop"""
         
         ## Thread id 
-        print(f"🧠 Thread id: {self.agent.memory.id}")
-        sandbox.get_sandbox(self.agent.memory.id)
+        print(f"🧠 Thread id: {self.agent.execution.memory_thread_id}")
+        sandbox.get_sandbox(self.agent.execution.memory_thread_id)
         
         step = 1
         print("🪄 Starting Agent Loop")
@@ -114,7 +116,7 @@ class CodingAgent:
                 
             step += 1
             
-        sandbox.sandboxes[self.agent.memory.id] = sandbox.current_sandbox
+        sandbox.sandboxes[self.agent.execution.memory_thread_id] = sandbox.current_sandbox
         return self.agent.retrieve_execution_result()
     
     async def _execute_local_tools_in_parallel(self, local_tool_calls):
