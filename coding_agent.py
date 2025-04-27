@@ -25,9 +25,9 @@ class CodingAgent:
 
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
         self.agent.add_local_tools(local_tools_list)
-        self.agent.memory_strategy = MemoryStrategy.BUFFERING
+        self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
+        self.agent.memory_strategy = MemoryStrategy.BUFFERING ##v alue
         
         # Setup Bedrock client
         if AWS_PROFILE:
