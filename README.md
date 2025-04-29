@@ -15,7 +15,7 @@
 </a>
 <br><br>
 
-<img src="images/coding-agent.png" alt="Coding Agent diagram" width="400">
+<img src="images/coding-agent.png" alt="Coding Agent diagram" width="600">
 
 </div>
 
