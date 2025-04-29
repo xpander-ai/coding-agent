@@ -24,6 +24,8 @@ if missing_env_vars:
 
 # AWS config
 AWS_PROFILE = getenv("AWS_PROFILE", None)
+AWS_ACCESS_KEY_ID = getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = getenv("AWS_REGION", None)
 AWS_SESSION_TOKEN = getenv("AWS_SESSION_TOKEN", None)
 
@@ -62,8 +64,8 @@ class CodingAgent:
             self.bedrock = boto3.client(
                 "bedrock-runtime",
                 region_name=AWS_REGION,
-                aws_access_key_id=getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=getenv("AWS_SECRET_ACCESS_KEY"),
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
                 aws_session_token=AWS_SESSION_TOKEN if AWS_SESSION_TOKEN else None
             )
 
