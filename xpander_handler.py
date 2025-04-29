@@ -18,6 +18,7 @@ xpander = XpanderClient(api_key=xpander_config.get("api_key"))
 # initialize agent instance
 agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
 coding_agent = CodingAgent(agent=agent)
+
 # === Define Execution Handler ===
 def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult:
     """

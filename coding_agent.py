@@ -6,7 +6,7 @@ import asyncio
 import inspect
 from typing import Optional
 import boto3
-from os import environ
+from os import getenv
 from dotenv import load_dotenv
 from xpander_sdk import Agent, LLMProvider, XpanderClient, ToolCallResult, MemoryStrategy
 from local_tools import local_tools_by_name, local_tools_list
@@ -15,11 +15,19 @@ import sandbox
 # Load environment variables
 load_dotenv()
 
+# Ensure required secrets
+required_env_vars = ["AWS_REGION","AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY"]
+missing_env_vars = [env_var_name for env_var_name in required_env_vars if getenv(env_var_name, None) is None]
+if len(missing_env_vars) != 0:
+    raise KeyError(f"Environment variables are missing. {missing_env_vars}")
+
 # AWS config
-AWS_PROFILE = environ.get("AWS_PROFILE")
-AWS_REGION = "us-west-2"
+AWS_PROFILE = getenv("AWS_PROFILE", None)
+AWS_REGION = getenv("AWS_REGION", None)
+AWS_SESSION_TOKEN = getenv("AWS_SESSION_TOKEN", None)
+
+# model configuration
 MODEL_ID = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-session_token = environ.get("AWS_SESSION_TOKEN")
 
 class CodingAgent:
     """Agent handling Bedrock interaction"""
@@ -28,7 +36,7 @@ class CodingAgent:
         self.agent = agent
         self.agent.add_local_tools(local_tools_list)
         self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
-        self.agent.memory_strategy = MemoryStrategy.BUFFERING ##v alue
+        self.agent.memory_strategy = MemoryStrategy.BUFFERING
         
         # Setup Bedrock client
         if AWS_PROFILE:
@@ -38,9 +46,9 @@ class CodingAgent:
             self.bedrock = boto3.client(
                 "bedrock-runtime", 
                 region_name=AWS_REGION, 
-                aws_access_key_id=environ.get("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=environ.get("AWS_SECRET_ACCESS_KEY"),
-                aws_session_token=session_token if session_token else None
+                aws_access_key_id=getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=getenv("AWS_SECRET_ACCESS_KEY"),
+                aws_session_token=AWS_SESSION_TOKEN if AWS_SESSION_TOKEN else None
             )
         
         # Configure tools
@@ -69,13 +77,15 @@ class CodingAgent:
     def _agent_loop(self):
         """Run the agent interaction loop"""
         
-        ## Thread id 
-        print(f"🧠 Thread id: {self.agent.execution.memory_thread_id}")
-        sandbox.get_sandbox(self.agent.execution.memory_thread_id)
-        
         step = 1
         print("🪄 Starting Agent Loop")
         while not self.agent.is_finished():
+            
+            if self.agent.execution.memory_thread_id:
+                ## create sandbox based on the thread id. threads are created when the agent starts to run
+                print(f"🧠 Thread id: {self.agent.execution.memory_thread_id}")
+                sandbox.get_sandbox(self.agent.execution.memory_thread_id)
+            
             print("-"*80)
             print(f"🔍 Step {step}")
             
@@ -83,6 +93,7 @@ class CodingAgent:
             response = self.bedrock.converse(
                 modelId=MODEL_ID,
                 messages=self.agent.messages,
+                inferenceConfig= { "temperature": 0.0 },
                 toolConfig=self.tool_config,
                 system=self.agent.memory.system_message
             )
