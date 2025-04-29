@@ -2,98 +2,91 @@
 Copyright (c) 2025 Xpander, Inc. All rights reserved.
 """
 
-import os
-import logging
 from typing import Dict, Any, Optional
 import sandbox
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Simplified local tools that just call the sandbox functions
+# === Local Tool Wrappers ===
 
 def git_clone(repo_url: str, branch: Optional[str] = None) -> Dict[str, Any]:
     """
-    Clone a git repository into the sandbox
-    
+    Clone a Git repository into the sandbox.
+
     Args:
-        repo_url: URL of the git repository to clone
-        branch: Optional branch to clone (default: main branch)
-        
+        repo_url (str): URL of the Git repository to clone.
+        branch (Optional[str]): Optional branch to clone (default: main branch).
+
     Returns:
-        Dictionary with clone status and message
+        Dict[str, Any]: Dictionary with clone status and message.
     """
     return sandbox.git_clone(repo_url, branch)
 
 def describe_folders_and_files() -> Dict[str, Any]:
     """
-    List all files and folders in the sandbox in a tree structure
-    
+    List all files and folders in the sandbox in a tree structure.
+
     Returns:
-        Dictionary with tree structure of files and folders
+        Dict[str, Any]: Dictionary with tree structure of files and folders.
     """
     return sandbox.describe_folders_and_files()
 
 def edit_file(file_path: str, content: str) -> Dict[str, Any]:
     """
-    Edit a file in the sandbox
-    
+    Edit a file in the sandbox with provided content.
+
     Args:
-        file_path: Path to the file to edit
-        content: New content for the file
-        
+        file_path (str): Path to the file to edit.
+        content (str): New content for the file.
+
     Returns:
-        Dictionary with edit status and message
+        Dict[str, Any]: Dictionary with edit status and message.
     """
-    # Clean the content if it's a Python file
     if file_path.endswith('.py'):
         content = content.replace('\\"\\"\\"', '"""')
     return sandbox.edit_file(file_path, content)
 
 def new_file(file_path: str, content: str) -> Dict[str, Any]:
     """
-    Create a new file in the sandbox
-    
+    Create a new file in the sandbox with provided content.
+
     Args:
-        file_path: Path to the file to create
-        content: Content for the new file
-        
+        file_path (str): Path to the file to create.
+        content (str): Content for the new file.
+
     Returns:
-        Dictionary with creation status and message
+        Dict[str, Any]: Dictionary with creation status and message.
     """
-    # Clean the content if it's a Python file
     if file_path.endswith('.py'):
         content = content.replace('\\"\\"\\"', '"""')
     return sandbox.new_file(file_path, content)
 
 def read_file(file_path: str) -> Dict[str, Any]:
     """
-    Read a file from the sandbox
-    
+    Read a file from the sandbox.
+
     Args:
-        file_path: Path to the file to read
-        
+        file_path (str): Path to the file to read.
+
     Returns:
-        Dictionary with file content and status
+        Dict[str, Any]: Dictionary with file content and status.
     """
     return sandbox.read_file(file_path)
 
 def commit(message: str, branch_name: str, repository: Optional[str] = None) -> Dict[str, Any]:
     """
-    Commit changes and push to a new branch
-    
+    Commit changes and push to a new branch.
+
     Args:
-        message: Commit message
-        branch_name: Name of the branch to create and push to
-        repository: Name of the repository to commit to (if not specified, uses the first found)
-        
+        message (str): Commit message.
+        branch_name (str): Name of the branch to create and push to.
+        repository (Optional[str]): Name of the repository to commit to (if not specified, uses the first found).
+
     Returns:
-        Dictionary with commit status and message
+        Dict[str, Any]: Dictionary with commit status and message.
     """
     return sandbox.commit(message, branch_name, repository)
 
-# Set up local tools
+# === Local Tools Declarations ===
+
 local_tools = [
     {
         "declaration": {
@@ -221,7 +214,7 @@ local_tools = [
                         },
                         "repository": {
                             "type": "string",
-                            "description": "Name of the repository to commit to (if not specified, uses the first found)"
+                            "description": "Name of the repository to commit to (optional)"
                         }
                     },
                     "required": ["message", "branch_name"]
