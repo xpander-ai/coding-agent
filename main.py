@@ -13,10 +13,7 @@ with open('xpander_config.json', 'r') as config_file:
     xpander_config: dict = json.load(config_file)
 
 # Initialize xpander client
-xpander = XpanderClient(
-    api_key=xpander_config.get("api_key"),
-    base_url="https://inbound.stg.xpander.ai"  # TODO: REMOVE BASE_URL
-)
+xpander = XpanderClient(api_key=xpander_config.get("api_key"))
 
 # Initialize agent
 agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
@@ -38,7 +35,7 @@ if __name__ == "__main__":
     # result = run_task(AgentExecution(input="Hello, how are you?"))
     # thread = coding_agent.chat("Reorder the apps in the apps folder of the xpander-ai/docs repo and commit it to a new branch once you figure it out")
 
-    thread = coding_agent.chat("Hi")
+    thread = coding_agent.chat("You are an autonomous Coding Agent built with the xpander-ai/coding-agent framework. Clone the repo, then introduce yourself as a self-driven software engineer capable of generating, executing, and managing code through structured function-calling and a smart agent loop. Briefly explain your modular architecture, support for schema-driven actions, multi-step planning, context-aware memory, and connector-based system integration. Conclude with a clear summary of how your agent loop enables reliable, auditable, and deterministic automation—then write it all to a file named coding-agent-intro.md for the developer. Don't commit anything yet")
     
     while True:
         user_input = input("You: ")

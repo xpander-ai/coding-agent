@@ -1,77 +1,128 @@
-# Agent Coding
+# 🚀 Coding Agent
 
-A secure AI coding assistant that can clone, edit, and push changes to git repositories.
+<div align="center">
 
-## Overview
+## <strong>Build, test, and deploy better AI agents — framework-agnostic, LLM-agnostic, and supercharged by <a href="https://xpander.ai" target="_blank">xpander.ai</a></strong>
 
-Agent Coding is a Python-based AI agent that provides secure code manipulation capabilities. It uses Claude 3.7 Sonnet through AWS Bedrock to understand user requests and execute coding tasks in an isolated sandbox environment. The agent can clone repositories, create or modify files, and commit changes back to a repository.
+<br>
 
-## Features
+<img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
+<img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+<a href="https://github.com/xpander-ai/agent-coding/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+<a href="https://discord.gg/CUcp4WWh5g"><img src="https://img.shields.io/badge/Discord-Join%20our%20community-7289DA" alt="Discord"></a>
+<a href="https://join.slack.com/t/xpandercommunity/shared_invite/zt-2mt2xkxkz-omM7f~_h2jcuzFudrYtZQQ" target="_blank">
+  <img src="https://img.shields.io/badge/Join%20Our%20Slack%20Community-Click%20Here-4A154B" alt="Join Our Slack Community">
+</a>
+<br><br>
 
-- **Secure Sandboxing**: All file operations occur in isolated environments per thread
-- **Git Integration**: Clone repositories and commit changes to new branches
-- **File Operations**: Read, create, and edit files within the sandbox
-- **Thread Isolation**: Each conversation maintains its own isolated workspace
+<img src="images/coding-agent.png" alt="Coding Agent diagram" width="400">
 
-## Architecture
+</div>
 
-The system consists of three main components:
+---
 
-1. **Coding Agent** (`coding_agent.py`): Handles interaction with AWS Bedrock, manages the AI conversation flow, and coordinates tool execution
+The **Coding Agent** is a lightweight, universal abstraction layer for any LLM or AI framework.
 
-2. **Sandbox** (`sandbox.py`): Provides a secure environment for file operations with basic path security to prevent sandbox escapes
+It empowers you to:
 
-3. **Local Tools** (`local_tools.py`): Defines the available operations the agent can perform
+- Operate seamlessly across Bedrock, OpenAI, Anthropic, and more  
+- Maintain persistent, threaded memory across executions  
+- Orchestrate multi-agent flows via A2A (Agent-to-Agent) graph control  
+- Run inside Xpander’s managed runtime or your own environment  
 
-## Available Tools
+**Example use case:**  
+Deploy a Bedrock dev agent alongside an OpenAI Codex agent, orchestrate them with a manager agent, and generate production-grade code.
 
-- `git_clone`: Clone a git repository into the sandbox
-- `describe_folders_and_files`: Show the contents of the sandbox in a tree structure
-- `edit_file`: Modify an existing file
-- `new_file`: Create a new file
-- `read_file`: Read the contents of a file
-- `commit`: Commit changes and push to a new branch
+> **xpander.ai makes reliable, scalable agent ecosystems effortless.**
 
-## Setup
+## ⚡ Core Differentiators
 
-1. Clone this repository
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Set up your AWS credentials for Bedrock access:
-   - Either set AWS_PROFILE environment variable
-   - Or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+| ✅ Capability | 🚀 Detail |
+|---------------|-----------|
+| **Framework & LLM Agnostic** | Speaks raw OpenAI, Anthropic, Gemini, Llama 3, Cohere, etc.—or plug in LangGraph/LangChain if you like. No opaque wrappers. |
+| **MCP‑Ready Tooling** | Any HTTP endpoint becomes a function call via the open **Model Context Protocol**, so models can act on real systems instantly. |
+| **Agent‑2‑Agent (A2A)** | Compose swarms of specialists that coordinate through xpander.ai's Agent Graph—delegation, parallelism, retries, done. |
+| **Threaded Memory** | Every conversation is a state machine: persistent, inspectable, replayable. |
+| **Minimal Abstractions** | We stay "thin": you keep full control of payloads, auth, and error handling. |
+| **Security by Design** | Per‑thread sandboxed FS, strict path‑whitelisting, no arbitrary shell, audited commits. |
 
-## Usage
+---
 
-```python
-from xpander_sdk import XpanderAgent
-from coding_agent import CodingAgent
+## 🏗️ High‑Level Architecture
 
-# Initialize the agent
-agent = XpanderAgent()
-coding = CodingAgent(agent)
-
-# Start a conversation
-thread_id = coding.chat("Clone the repository https://github.com/xpander-ai/docs.git and add a new tutorial")
-
-# Continue the conversation in the same thread
-coding.chat("Now commit these changes to a new branch called 'new-tutorial'", thread_id)
+```
+┌───────────────┐         ┌──────────────┐         ┌────────────────────┐
+│ Any other     │         │ coding_agent ├─Native─►│  Any LLM provider  │
+│ Agent         ├─--A2A──►│              │         └────────────────────┘
+└───────────────┘         └──────────────┘
+                                 │
+                                 │ function‑calls (MCP)
+                                 ▼
+                          ┌─────────────────────────┐
+                          │  xpander.ai connectors  │───▶ Any Rest API
+                          └─────────────────────────┘
+                                 │
+                                 ▼
+                          ┌─────────────────────────┐
+                          │  Secure sandbox (FS)    │
+                          └─────────────────────────┘
 ```
 
-## Security
+---
 
-The sandbox implementation focuses on providing a secure, isolated environment for the AI to work with files:
+## 🚀 Quick Start
 
-- Each thread gets its own isolated workspace
-- Path traversal attacks are blocked
-- Operations are contained within the sandbox directory
-- No arbitrary command execution is permitted
+```bash
+git clone https://github.com/xpander-ai/agent-coding.git
+cd agent-coding
+pip install -r requirements.txt
 
+cp .env.example .env   # add your OpenAI/Anthropic/Gemini keys + xpander creds
+python main.py         # launch the agent
+```
 
-## License
+### One‑Prompt Demo
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```python
+from coding_agent import CodingAgent
 
-Copyright (c) 2025 Xpander, Inc. All rights reserved.
+agent = CodingAgent()
+thread = agent.chat(
+    "Clone https://github.com/xpander-ai/docs.git and add a 'Getting Started' tutorial"
+)
+agent.chat("Push the change on a new branch called getting-started", thread)
+```
+
+---
+
+## 🔌 Built‑in Tools
+
+| Tool | Purpose |
+|------|---------|
+| `git_clone` | Shallow‑clone repo into the sandbox |
+| `describe_folders_and_files` | Visual tree preview |
+| `read_file`, `edit_file`, `new_file` | Safe file operations |
+| `commit` | Commit & push to a new branch |
+| `run_tests` | Execute project tests inside the sandbox |
+| `call_endpoint` | Invoke any MCP‑described REST/gRPC endpoint |
+
+---
+
+## 🧠 Memory & Orchestration
+
+* **Threads** – each session keeps its own message graph (like chat‑GPT "history" but inspectable JSON).  
+* **Agent Graph** – define DAGs that gate which functions can be called and in what order. Enforces reliability and compliance.
+
+---
+
+## 📚 Further Reading
+
+* [Quick‑start guide](https://docs.xpander.ai/docs/01-get-started/01-index)
+* [Agent‑2‑Agent Graph](https://docs.xpander.ai/docs/02-agent-builder/06-multi-agent-teams)
+
+---
+
+## 📜 License
+
+MIT © 
+2025 Xpander Inc.
