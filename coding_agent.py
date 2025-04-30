@@ -115,13 +115,21 @@ class CodingAgent:
             print("-" * 80)
             print(f"🔍 Step {step}")
 
-            response = self.bedrock.converse(
-                modelId=MODEL_ID,
-                messages=self.agent.messages,
-                inferenceConfig={"temperature": 0.0},
-                toolConfig=self.tool_config,
-                system=self.agent.memory.system_message
-            )
+            def run_completion():
+                for attempt in range(3):
+                    try:
+                        return self.bedrock.converse(
+                            modelId=MODEL_ID,
+                            messages=self.agent.messages,
+                            inferenceConfig={"temperature": 0.0},
+                            toolConfig=self.tool_config,
+                            system=self.agent.memory.system_message
+                        )
+                    except Exception as e:
+                        if attempt == 2:
+                            raise
+
+            response = run_completion()
             self.agent.add_messages(response)
 
             # Extract and execute tool calls
