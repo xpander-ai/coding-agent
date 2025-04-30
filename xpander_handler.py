@@ -15,10 +15,10 @@ with open('xpander_config.json', 'r') as config_file:
 
 # === Initialize Event Listener ===
 # Creates a listener to subscribe to execution requests from specified agent(s).
-listener = XpanderEventListener(**xpander_config, base_url="https://inbound.stg.xpander.ai")
+listener = XpanderEventListener(**xpander_config)
 
 # Initialize xpander client
-xpander = XpanderClient(api_key=xpander_config.get("api_key"), base_url="https://inbound.stg.xpander.ai")
+xpander = XpanderClient(api_key=xpander_config.get("api_key"))
 
 # === Define Execution Handler ===
 def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult:
