@@ -20,10 +20,6 @@ listener = XpanderEventListener(**xpander_config)
 # Initialize xpander client
 xpander = XpanderClient(api_key=xpander_config.get("api_key"))
 
-# Initialize agent instance
-agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
-coding_agent = CodingAgent(agent=agent)
-
 # === Define Execution Handler ===
 def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult:
     """
@@ -43,6 +39,11 @@ def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult
         - Integration built for xpander.ai agent execution flow.
         - The function calls the internal `_agent_loop` to process tasks.
     """
+    
+    # Initialize agent instance
+    agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
+    coding_agent = CodingAgent(agent=agent)
+    
     agent.init_task(execution=execution_task.model_dump())
     execution_status = coding_agent._agent_loop()
     
