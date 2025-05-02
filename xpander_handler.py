@@ -41,11 +41,20 @@ def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult
     """
     
     # Initialize agent instance
-    agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
-    coding_agent = CodingAgent(agent=agent)
-    
-    agent.init_task(execution=execution_task.model_dump())
-    execution_status = coding_agent._agent_loop()
+    try:
+        agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
+        coding_agent = CodingAgent(agent=agent)
+        
+        agent.init_task(execution=execution_task.model_dump())
+        execution_status = coding_agent._agent_loop()
+    except Exception as e:
+        print(f"❌ Error in agent loop: {str(e)}")
+        return AgentExecutionResult(
+            result="The agent is not available at this time. Please try again later.",
+            is_success=False,
+            status=ExecutionStatus.ERROR,
+            error=str(e)
+        )
     
     return AgentExecutionResult(
         result=execution_status.result,
