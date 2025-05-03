@@ -3,18 +3,18 @@ Copyright (c) 2025 Xpander, Inc. All rights reserved.
 """
 
 import inspect
+from os import getenv
 from typing import Optional
-from xpander_sdk import Agent, LLMProvider, XpanderClient, ToolCallResult, MemoryStrategy, LLMTokens, Tokens
+from xpander_sdk import Agent, LLMProvider, XpanderClient, ToolCallResult, MemoryStrategy, LLMTokens, Tokens, ToolCall, ToolCallType
 from local_tools import local_tools_by_name, local_tools_list
 import sandbox
 import time
 from bedrock import BedrockProvider
+from dotenv import load_dotenv
+load_dotenv()
 
-# === Coding Agent Class ===
-
-MAXIMUM_STEPS_SOFT_LIMIT = 5
-MAXIMUM_STEPS_HARD_LIMIT = 7
-
+MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
+MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
 
 class CodingAgent:
     """
@@ -99,8 +99,8 @@ class CodingAgent:
 
             ## AI Safety Check
             if step > MAXIMUM_STEPS_SOFT_LIMIT:
-                print("🔴 Step limit reached. Sending user message to gracefully finish execution.")
-                self.agent.add_messages([{"role": "user", "content": "The steps limit has been reached. Please stop the execution by calling the xpfinish-agent-execution-finished tool with the last result. All access to other tools has been blocked, please use the xpfinish-agent-execution-finished tool to finish the execution."}])
+                print("🔴 Step limit reached. Sending system message to gracefully finish execution.")
+                self.agent.add_messages([{"role": "user", "content": "⛔ STEP LIMIT HIT. Immediately invoke xpfinish-agent-execution-finished with a final result and `is_success=false`. Do NOTHING else."}])
 
                 ## Filter tools to only include the xpfinish-agent-execution-finished tool
                 filtered_tools = [tool for tool in self.agent.get_tools() if tool.get('toolSpec', {}).get('name') == 'xpfinish-agent-execution-finished']
@@ -112,6 +112,20 @@ class CodingAgent:
                 ## In rare cases, the agent may not respond to the user message.
                 ## We will break the loop after a certain number of steps to avoid infinite loops.
                 if step > MAXIMUM_STEPS_HARD_LIMIT:
+                    print("🔴 Hard limit reached. Breadking the loop manually.")
+                    manually_finish_execution = ToolCall(
+                        name="xpfinish-agent-execution-finished",
+                        type=ToolCallType.XPANDER,
+                        payload={
+                            "bodyParams": {
+                                "result": "This request was terminated automatically after reaching the agent's maximum step limit. Try breaking it into smaller, more focused requests.",
+                                "is_success": False
+                            },
+                            "queryParams": {},
+                            "pathParams": {}
+                        }                    
+                    )
+                    self.agent.run_tool(tool=manually_finish_execution)
                     break
 
             print("-" * 80)

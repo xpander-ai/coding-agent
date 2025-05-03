@@ -3,7 +3,7 @@ from xpander_utils.events import (
     XpanderEventListener,
     AgentExecutionResult,
     AgentExecution,
-    ExecutionStatus,
+    ExecutionStatus
 )
 from xpander_sdk import XpanderClient
 from coding_agent import CodingAgent
@@ -49,11 +49,14 @@ def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult
         execution_status = coding_agent._agent_loop()
     except Exception as e:
         print(f"❌ Error in agent loop: {str(e)}")
+        agent = xpander.agents.get(agent_id=xpander_config.get("agent_id"))
+        agent.init_task(execution=execution_task.model_dump())
+        agent.execution.status = ExecutionStatus.ERROR
+        agent.execution.result = "The agent is not available at this time. Please try again later"
+        
         return AgentExecutionResult(
-            result="The agent is not available at this time. Please try again later.",
-            is_success=False,
-            status=ExecutionStatus.ERROR,
-            error=str(e)
+            result=agent.execution.result,
+            is_success=False
         )
     
     return AgentExecutionResult(
