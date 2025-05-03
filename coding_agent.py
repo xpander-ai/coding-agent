@@ -26,7 +26,7 @@ class CodingAgent:
         tool_config (dict): Configuration for available tools.
     """
 
-    def __init__(self, agent: Agent, model_id: Optional[str] = None):
+    def __init__(self, agent: Agent):
         """
         Initialize the CodingAgent.
 
@@ -35,12 +35,14 @@ class CodingAgent:
             model_id (Optional[str]): Model ID to use. If not provided, defaults to provider's default.
         """
         self.agent = agent
-        self.agent.add_local_tools(local_tools_list)
-        self.agent.memory_strategy = MemoryStrategy.CLEAN_TOOL_CALLS
+        
+        ## Configure agent
+        self.agent.memory_strategy = MemoryStrategy.MOVING_WINDOW
         self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
-        self.model_endpoint = BedrockProvider(model_id=model_id)
+        self.model_endpoint = BedrockProvider()
 
         # Configure tools
+        self.agent.add_local_tools(local_tools_list)
         self.tool_config = {
             "tools": agent.get_tools(),
             "toolChoice": {"any": {} if agent.tool_choice == 'required' else False}
@@ -113,26 +115,16 @@ class CodingAgent:
                 ## We will break the loop after a certain number of steps to avoid infinite loops.
                 if step > MAXIMUM_STEPS_HARD_LIMIT:
                     print("🔴 Hard limit reached. Breadking the loop manually.")
-                    manually_finish_execution = ToolCall(
-                        name="xpfinish-agent-execution-finished",
-                        type=ToolCallType.XPANDER,
-                        payload={
-                            "bodyParams": {
-                                "result": "This request was terminated automatically after reaching the agent's maximum step limit. Try breaking it into smaller, more focused requests.",
-                                "is_success": False
-                            },
-                            "queryParams": {},
-                            "pathParams": {}
-                        }                    
-                    )
-                    self.agent.run_tool(tool=manually_finish_execution)
+                    self._manually_finish_execution("This request was terminated automatically after reaching the agent's maximum step limit. Try breaking it into smaller, more focused requests.")
                     break
 
             print("-" * 80)
             print(f"🔍 Step {step}")
 
             response = self._call_model()
-            
+            if(response['status'] == "error"):
+                self._manually_finish_execution(response['result'])
+                break
             # Track token usage
             execution_tokens.worker.completion_tokens += response['usage']['outputTokens']
             execution_tokens.worker.prompt_tokens += response['usage']['inputTokens']
@@ -171,7 +163,6 @@ class CodingAgent:
 
             print(f"🔢 Step {step} tokens used: {response['usage']['totalTokens']} (output: {response['usage']['outputTokens']}, input: {response['usage']['inputTokens']})")
             step += 1
-            
 
         print(f"✨ Execution duration: {time.perf_counter() - execution_start_time:.2f} seconds")
         print(f"🔢 Total tokens used: {execution_tokens.worker.total_tokens} (output: {execution_tokens.worker.completion_tokens}, input: {execution_tokens.worker.prompt_tokens})")
@@ -269,3 +260,22 @@ class CodingAgent:
         tool_end_time = time.time()
         print(f"🔧 Tool {tool.name} completed in {tool_end_time - tool_start_time:.2f} seconds")
         return tool_call_result
+
+    def _manually_finish_execution(self, message: str):
+        """
+        Manually finish the execution of the agent.
+        """
+        
+        manually_finish_execution = ToolCall(
+                        name="xpfinish-agent-execution-finished",
+                        type=ToolCallType.XPANDER,
+                        payload={
+                            "bodyParams": {
+                                "result": message,
+                                "is_success": False
+                            },
+                            "queryParams": {},
+                            "pathParams": {}
+                        }                    
+                    )
+        self.agent.run_tool(tool=manually_finish_execution)

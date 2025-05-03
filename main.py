@@ -34,7 +34,8 @@ if __name__ == "__main__":
     # Example for initial instruction (commented out alternative example):
     # result = run_task(AgentExecution(input="Hello, how are you?"))
 
-    thread = coding_agent.chat("You are an autonomous Coding Agent built with the xpander-ai/coding-agent source-code. Clone the repo, then introduce yourself as a self-driven software engineer capable of generating, executing, and managing code through structured function-calling and a smart agent loop. Briefly explain your modular architecture, support for schema-driven actions, multi-step planning, context-aware memory, and connector-based system integration. Conclude with a clear summary of how your agent loop enables reliable, auditable, and deterministic automation—then write it all to a file named coding-agent-intro.md for the developer. Don't commit anything yet.")    
+    # thread = coding_agent.chat("You are an autonomous Coding Agent built with the xpander-ai/coding-agent source-code. Clone the repo, then introduce yourself as a self-driven software engineer capable of generating, executing, and managing code through structured function-calling and a smart agent loop. Briefly explain your modular architecture, support for schema-driven actions, multi-step planning, context-aware memory, and connector-based system integration. Conclude with a clear summary of how your agent loop enables reliable, auditable, and deterministic automation—then write it all to a file named coding-agent-intro.md for the developer. Don't commit anything yet.")    
+    thread = coding_agent.chat("Hi")
     while True:
         user_input = input("You: ")
         coding_agent.chat(user_input, thread)
