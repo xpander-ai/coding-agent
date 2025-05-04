@@ -46,6 +46,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
 
         # initialise task metadata (also blocking)
         await asyncio.to_thread(agent.init_task, execution=execution_task.model_dump())
+        raise Exception("Test")
 
         # --- run the CodingAgent -------------------------------------
         coding_agent = CodingAgent(agent=agent)
@@ -54,18 +55,11 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
     except Exception as exc:
         # --------------------------------------------------------------
         logger.error(f"❌ Error in agent loop: {exc}")
+        error = (
+                "The agent is not available at this time. Please try again later."
+            )
 
-        # Ensure xpander agent reflects failure state
-        agent = await asyncio.to_thread(
-            xpander.agents.get, agent_id=xpander_cfg["agent_id"]
-        )
-        await asyncio.to_thread(agent.init_task, execution=execution_task.model_dump())
-        agent.execution.status = ExecutionStatus.ERROR
-        agent.execution.result = (
-            "The agent is not available at this time. Please try again later."
-        )
-
-        return AgentExecutionResult(result=agent.execution.result, is_success=False)
+        return AgentExecutionResult(result=error, is_success=False)
 
     # ---------------- normal completion ------------------------------
     return AgentExecutionResult(

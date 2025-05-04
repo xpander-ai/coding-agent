@@ -3,7 +3,6 @@ Copyright (c) 2025 Xpander, Inc. All rights reserved.
 """
 
 import os
-import uuid
 import subprocess
 import shutil
 from typing import Optional, Dict, Any
@@ -40,9 +39,8 @@ def get_sandbox_path(thread_id: Optional[str] = None) -> str:
         current_sandbox = sandboxes[thread_id]
         return current_sandbox
 
-    sandbox_id = str(uuid.uuid4())[:8]
     thread_part = f"{thread_id}_" if thread_id else ""
-    sandbox_path = os.path.join(SANDBOX_BASE_DIR, f"sandbox_{thread_part}{sandbox_id}")
+    sandbox_path = os.path.join(SANDBOX_BASE_DIR, f"sandbox_{thread_part}")
 
     if os.path.exists(sandbox_path):
         shutil.rmtree(sandbox_path)
