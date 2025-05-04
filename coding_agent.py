@@ -1,230 +1,301 @@
 """
+Async CodingAgent for xpander.ai
+
 Copyright (c) 2025 Xpander, Inc. All rights reserved.
 """
 
 import asyncio
 import inspect
-from typing import Optional
-import boto3
+import time
 from os import getenv
-from dotenv import load_dotenv
-from xpander_sdk import Agent, LLMProvider, XpanderClient, ToolCallResult, MemoryStrategy
+from typing import Optional, List, Dict, Any
+from loguru import logger
+from xpander_sdk import (
+    Agent, LLMProvider, XpanderClient,
+    ToolCallResult, MemoryStrategy, LLMTokens,
+    Tokens, ToolCall, ToolCallType
+)
 from local_tools import local_tools_by_name, local_tools_list
 import sandbox
+from loguru import logger
 
-# === Load Environment Variables ===
-
+from bedrock import AsyncBedrockProvider
+from dotenv import load_dotenv
 load_dotenv()
 
-# Ensure required secrets
-required_env_vars = ["AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-missing_env_vars = [env_var_name for env_var_name in required_env_vars if getenv(env_var_name, None) is None]
-if missing_env_vars:
-    raise KeyError(f"Environment variables are missing: {missing_env_vars}")
+MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
+MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
 
-# AWS config
-AWS_PROFILE = getenv("AWS_PROFILE", None)
-AWS_REGION = getenv("AWS_REGION", None)
-AWS_SESSION_TOKEN = getenv("AWS_SESSION_TOKEN", None)
-
-# Model configuration
-MODEL_ID = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-
-# === Coding Agent Class ===
 
 class CodingAgent:
     """
-    Agent handling Bedrock interaction.
-
-    Attributes:
-        agent (Agent): The xpander.ai agent instance.
-        bedrock (boto3.Client): AWS Bedrock runtime client.
-        tool_config (dict): Configuration for available tools.
+    Agent orchestrating LLM interaction + tool execution (async version).
     """
 
-    def __init__(self, agent: Agent):
-        """
-        Initialize the CodingAgent.
-
-        Args:
-            agent (Agent): Agent object initialized via xpander.ai SDK.
-        """
+    # Init and set defaults + settings
+    def __init__(self, agent: Agent) -> None:
         self.agent = agent
-        self.agent.add_local_tools(local_tools_list)
+
+        # --- configure the xpander.ai agent object as before -----------
+        self.agent.memory_strategy = MemoryStrategy.MOVING_WINDOW
         self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
-        self.agent.memory_strategy = MemoryStrategy.BUFFERING
 
-        # Setup Bedrock client
-        if AWS_PROFILE:
-            session = boto3.Session(profile_name=AWS_PROFILE)
-            self.bedrock = session.client("bedrock-runtime", region_name=AWS_REGION)
-        else:
-            self.bedrock = boto3.client(
-                "bedrock-runtime",
-                region_name=AWS_REGION,
-                aws_access_key_id=getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=getenv("AWS_SECRET_ACCESS_KEY"),
-                aws_session_token=AWS_SESSION_TOKEN if AWS_SESSION_TOKEN else None
-            )
+        # async Bedrock client
+        self.model_endpoint = AsyncBedrockProvider()
 
-        # Configure tools
+        # tool config
+        self.agent.add_local_tools(local_tools_list)
         self.tool_config = {
-            "tools": agent.get_tools(),
-            "toolChoice": {"any": {} if agent.tool_choice == 'required' else False}
+            "tools": self.agent.get_tools(),
+            "toolChoice": {"any": {} if self.agent.tool_choice == "required" else False},
         }
 
-    def chat(self, user_input: str, thread_id: Optional[str] = None):
+    # Chat Public entry point
+    async def chat(self, user_input: str, thread_id: Optional[str] = None) -> str:
         """
-        Start a conversation with the agent.
-
-        Args:
-            user_input (str): User message.
-            thread_id (Optional[str]): Existing thread identifier (for continuity).
-
-        Returns:
-            str: Memory thread ID associated with the conversation.
+        Add a task and run the async agent loop. Returns the memory thread id.
         """
         if thread_id:
-            print(f"🧠 Adding task to existing thread: {thread_id}")
+            logger.info(f"🧠 Adding task to existing thread: {thread_id}")
             self.agent.add_task(input=user_input, thread_id=thread_id)
         else:
-            print("🧠 Adding task to a new thread")
+            logger.info("🧠 Adding task to a new thread")
             self.agent.add_task(input=user_input)
 
-        agent_thread = self._agent_loop()
-
-        print(f"📝 Last message: {self.agent.messages[-1]['content'][-1]}")
-        print(f"🧠 AI Agent response: {agent_thread.result}")
+        agent_thread = await self._agent_loop()      # ← awaits now
+        logger.info("-" * 80)
+        logger.info(f"🤖 Agent response: {agent_thread.result}")
         return agent_thread.memory_thread_id
 
-    def _agent_loop(self):
+    # Internals
+    async def _call_model(self) -> Dict[str, Any]:
         """
-        Run the agent interaction loop, handling LLM responses and tool executions.
+        Invoke Bedrock through AsyncBedrockProvider – non‑blocking.
+        """
+        return await self.model_endpoint.invoke_model(
+            messages=self.agent.messages,
+            system_message=self.agent.memory.system_message,
+            temperature=0.0,
+            tool_config=self.tool_config,
+        )
 
-        Returns:
-            ExecutionResult: Final result after task execution.
+    async def _agent_loop(self):
+        """
+        Core reasoning/execution loop – now async‑friendly.
         """
         step = 1
-        print("🪄 Starting Agent Loop")
+        logger.info("🪄 Starting Agent Loop")
+        execution_tokens = Tokens(worker=LLMTokens(0, 0, 0))
+        execution_start_time = time.perf_counter()
+
         while not self.agent.is_finished():
+            sandbox.get_sandbox(self.agent.execution.memory_thread_id)
 
-            if self.agent.execution.memory_thread_id:
-                print(f"🧠 Thread id: {self.agent.execution.memory_thread_id}")
-                sandbox.get_sandbox(self.agent.execution.memory_thread_id)
+            # ---------- AI‑safety step limit guardrails --------------
+            if step > MAXIMUM_STEPS_SOFT_LIMIT:
+                logger.error("🔴 Step limit reached → asking agent to wrap up")
+                self.agent.add_messages(
+                    [
+                        {
+                            "role": "user",
+                            "content": (
+                                "⛔ STEP LIMIT HIT. Immediately invoke "
+                                "xpfinish-agent-execution-finished with a final "
+                                "result and `is_success=false`. Do NOTHING else."
+                            ),
+                        }
+                    ]
+                )
 
-            print("-" * 80)
-            print(f"🔍 Step {step}")
+                filtered_tools = [
+                    t
+                    for t in self.agent.get_tools()
+                    if t.get("toolSpec", {}).get("name") == "xpfinish-agent-execution-finished"
+                ]
+                self.tool_config = {"tools": filtered_tools, "toolChoice": {"any": {}}}
 
-            def run_completion():
-                for attempt in range(3):
-                    try:
-                        return self.bedrock.converse(
-                            modelId=MODEL_ID,
-                            messages=self.agent.messages,
-                            inferenceConfig={"temperature": 0.0},
-                            toolConfig=self.tool_config,
-                            system=self.agent.memory.system_message
-                        )
-                    except Exception as e:
-                        if attempt == 2:
-                            raise
+                if step > MAXIMUM_STEPS_HARD_LIMIT:
+                    logger.error("🔴 Hard limit reached → force finish")
+                    await self._manually_finish_execution(
+                        "This request was terminated automatically after "
+                        "reaching the agent's maximum step limit. "
+                        "Try breaking it into smaller, more focused requests."
+                    )
+                    break
 
-            response = run_completion()
+            # --------------------------------------------------------
+            logger.info("-" * 80)
+            logger.info(f"🔍 Step {step}")
+
+            response = await self._call_model()
+
+            if response.get("status") == "error":          # early‑exit on model failure
+                await self._manually_finish_execution(response["result"])
+                break
+
+            # -------- token accounting --------------------------------
+            usage = response["usage"]
+            execution_tokens.worker.completion_tokens += usage["outputTokens"]
+            execution_tokens.worker.prompt_tokens += usage["inputTokens"]
+            execution_tokens.worker.total_tokens += usage["totalTokens"]
+
+            # -------- update agent state ------------------------------
             self.agent.add_messages(response)
 
-            # Extract and execute tool calls
+            # report usage (cheap → keep sync)
+            self.agent.report_execution_metrics(
+                llm_tokens=execution_tokens, ai_model="claude-3-7-sonnet"
+            )
+
+            # -------- tool handling -----------------------------------
             tool_calls = self.agent.extract_tool_calls(llm_response=response)
-            cloud_tool_call_results = self.agent.run_tools(tool_calls=tool_calls)
 
-            # Handle local tool calls
-            local_tool_calls = XpanderClient.retrieve_pending_local_tool_calls(tool_calls=tool_calls)
-            cloud_tool_call_results[:] = [c for c in cloud_tool_call_results if c.tool_call_id not in {t.tool_call_id for t in local_tool_calls}]
-            local_tool_call_results = asyncio.run(self._execute_local_tools_in_parallel(local_tool_calls))
+            # run cloud tools (off‑thread)
+            cloud_tool_call_results = await asyncio.to_thread(
+                self.agent.run_tools, tool_calls=tool_calls
+            )
 
+            # pending local tool calls
+            local_tool_calls = await asyncio.to_thread(
+                XpanderClient.retrieve_pending_local_tool_calls, tool_calls=tool_calls
+            )
+            cloud_tool_call_results[:] = [
+                c
+                for c in cloud_tool_call_results
+                if c.tool_call_id not in {t.tool_call_id for t in local_tool_calls}
+            ]
+
+            # run local tools in parallel (each in its own worker thread)
+            local_tool_call_results = await self._execute_local_tools(local_tool_calls)
+
+            # attach results back to agent memory
             if local_tool_call_results:
-                self.agent.memory.add_tool_call_results(tool_call_results=local_tool_call_results)
+                self.agent.memory.add_tool_call_results(
+                    tool_call_results=local_tool_call_results
+                )
 
-            # Print tool execution results
-            all_tool_call_results = cloud_tool_call_results + local_tool_call_results
-            for result in all_tool_call_results:
-                emoji = "✅" if result.is_success else "❌"
-                print(f"{emoji} {result.function_name}")
+            # pretty‑print outcomes
+            for res in cloud_tool_call_results + local_tool_call_results:
+                emoji = "✅" if res.is_success else "❌"
+                logger.info(f"{emoji} {res.function_name}")
 
+            logger.info(
+                f"🔢 Step {step} tokens used: {usage['totalTokens']} "
+                f"(output: {usage['outputTokens']}, input: {usage['inputTokens']})"
+            )
             step += 1
+
+        # ------------------ loop exit summary -------------------------
+        logger.info(
+            f"✨ Execution duration: {time.perf_counter() - execution_start_time:.2f} s"
+        )
+        logger.info(
+            f"🔢 Total tokens used: {execution_tokens.worker.total_tokens} "
+            f"(output: {execution_tokens.worker.completion_tokens}, "
+            f"input: {execution_tokens.worker.prompt_tokens})"
+        )
 
         sandbox.sandboxes[self.agent.execution.memory_thread_id] = sandbox.current_sandbox
         return self.agent.retrieve_execution_result()
 
-    async def _execute_local_tools_in_parallel(self, local_tool_calls):
+    # ------------------------------------------------------------------ #
+    # Local‑tool helpers
+    # ------------------------------------------------------------------ #
+    async def _execute_local_tools(self, local_tool_calls: List) -> List[ToolCallResult]:
         """
-        Execute multiple local tools in parallel.
-
-        Args:
-            local_tool_calls (list): List of tool calls to execute.
-
-        Returns:
-            list: Results from all executed tools.
+        Run local tool invocations concurrently in the default ThreadPool.
         """
-        tasks = [self._execute_local_tool(tool) for tool in local_tool_calls]
-        return await asyncio.gather(*tasks)
+        if not local_tool_calls:
+            return []
+
+        start = time.time()
+        results = await asyncio.gather(
+            *(self._execute_local_tool(t) for t in local_tool_calls)
+        )
+        if len(results) > 1:
+            logger.info(f"⚙️ Executed {len(results)} local tools in {time.time() - start:.2f} s")
+        return results
 
     async def _execute_local_tool(self, tool):
         """
-        Execute a single local tool securely.
-
-        Args:
-            tool (ToolCall): Tool call object.
-
-        Returns:
-            ToolCallResult: Result of tool execution.
+        Execute a single local tool off‑thread; keep logs & error handling identical.
         """
-        print(f"🔦 Executing local tool: {tool.name} with generated payload: {tool.payload}")
-        tool_call_result = ToolCallResult(function_name=tool.name, tool_call_id=tool.tool_call_id, payload=tool.payload)
+        tool_start_time = time.time()
+        logger.info(
+            f"🔦 LLM Requesting local tool: {tool.name} "
+            f"with generated payload: {tool.payload}"
+        )
+
+        tool_call_result = ToolCallResult(
+            function_name=tool.name, tool_call_id=tool.tool_call_id, payload=tool.payload
+        )
+
+        def _run_tool():
+            """
+            Synchronous helper executed in a worker thread.
+            """
+            original_func = local_tools_by_name.get(tool.name)
+            if not original_func:
+                raise ValueError(f"Tool {tool.name} not found")
+
+            # sandboxify paths
+            params = {
+                k: sandbox.get_sandbox(filepath=v)
+                if k in {"filepath", "directory", "target_dir", "cwd"} and isinstance(v, str)
+                else v
+                for k, v in tool.payload.items()
+            }
+
+            # argument validation
+            sig = inspect.signature(original_func)
+            invalid = [k for k in params if k not in sig.parameters]
+            if invalid:
+                return False, {
+                    "success": False,
+                    "message": f"Invalid parameters for {tool.name}: {', '.join(invalid)}",
+                    "invalid_params": invalid,
+                }
+
+            return True, original_func(**params)
 
         try:
-            original_func = local_tools_by_name[tool.name]
+            is_ok, result_dict = await asyncio.to_thread(_run_tool)
+            tool_call_result.is_success = result_dict.get("success", is_ok)
+            tool_call_result.result = result_dict
 
-            sandboxed_params = {}
-            for key, value in tool.payload.items():
-                if key in ['filepath', 'directory', 'target_dir', 'cwd'] and isinstance(value, str):
-                    sandboxed_params[key] = sandbox.get_sandbox(filepath=value)
-                else:
-                    sandboxed_params[key] = value
-
-            sig = inspect.signature(original_func)
-            valid_params = sig.parameters.keys()
-            invalid_params = [k for k in sandboxed_params if k not in valid_params]
-            if invalid_params:
-                tool_call_result.is_success = False
-                tool_call_result.result = {
-                    "success": False,
-                    "message": f"Invalid parameters for {tool.name}: {', '.join(invalid_params)}",
-                    "invalid_params": invalid_params
-                }
-                return tool_call_result
-
-            if asyncio.iscoroutinefunction(original_func):
-                local_tool_response = await original_func(**sandboxed_params)
-            else:
-                def run_func():
-                    return original_func(**sandboxed_params)
-                loop = asyncio.get_event_loop()
-                local_tool_response = await loop.run_in_executor(None, run_func)
-
-            tool_call_result.is_success = local_tool_response.get('success', True)
-            tool_call_result.result = local_tool_response
-
-        except Exception as e:
+        except Exception as exc:
             import traceback
-            error_traceback = traceback.format_exc()
-            print(f"❌ Error executing tool {tool.name}: {str(e)}")
-            print(f"Traceback: {error_traceback}")
 
+            logger.error(f"❌ Error executing tool {tool.name}: {exc}")
+            logger.critical("Traceback:", traceback.format_exc())
             tool_call_result.is_success = False
             tool_call_result.result = {
                 "success": False,
-                "message": f"Error executing {tool.name}: {str(e)}",
-                "error": str(e)
+                "message": f"Error executing {tool.name}: {exc}",
+                "error": str(exc),
             }
 
+        logger.info(f"🔧 Tool {tool.name} completed in {time.time() - tool_start_time:.2f} s")
         return tool_call_result
+
+    # ------------------------------------------------------------------ #
+    # Forced finish util
+    # ------------------------------------------------------------------ #
+    async def _manually_finish_execution(self, message: str):
+        """
+        Push an xpfinish call through the agent in a worker thread so we
+        don’t block the event‑loop on synchronous SDK internals.
+        """
+        async def _push():
+            finish_call = ToolCall(
+                name="xpfinish-agent-execution-finished",
+                type=ToolCallType.XPANDER,
+                payload={
+                    "bodyParams": {"result": message, "is_success": False},
+                    "queryParams": {},
+                    "pathParams": {},
+                },
+            )
+            self.agent.run_tool(tool=finish_call)
+
+        await asyncio.to_thread(_push)
