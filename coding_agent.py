@@ -11,7 +11,7 @@ from os import getenv
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from xpander_sdk import (
-    Agent, LLMProvider, XpanderClient,
+    Agent, LLMProvider,
     ToolCallResult, MemoryStrategy, LLMTokens,
     Tokens, ToolCall, ToolCallType
 )
@@ -116,10 +116,10 @@ class CodingAgent:
 
                 if step > MAXIMUM_STEPS_HARD_LIMIT:
                     logger.error("🔴 Hard limit reached → force finish")
-                    await self._manually_finish_execution(
-                        "This request was terminated automatically after "
+                    self.agent.stop_execution(is_success=False,result=
+                        ("This request was terminated automatically after "
                         "reaching the agent's maximum step limit. "
-                        "Try breaking it into smaller, more focused requests."
+                        "Try breaking it into smaller, more focused requests.")
                     )
                     break
 
@@ -130,7 +130,7 @@ class CodingAgent:
             response = await self._call_model()
 
             if response.get("status") == "error":          # early‑exit on model failure
-                await self._manually_finish_execution(response["result"])
+                self.agent.stop_execution(is_success=False,result=response["result"])
                 break
 
             # -------- token accounting --------------------------------
@@ -157,7 +157,7 @@ class CodingAgent:
 
             # pending local tool calls
             local_tool_calls = await asyncio.to_thread(
-                XpanderClient.retrieve_pending_local_tool_calls, tool_calls=tool_calls
+                self.agent.retrieve_pending_local_tool_calls, tool_calls=tool_calls
             )
             cloud_tool_call_results[:] = [
                 c
@@ -277,25 +277,3 @@ class CodingAgent:
 
         logger.info(f"🔧 Tool {tool.name} completed in {time.time() - tool_start_time:.2f} s")
         return tool_call_result
-
-    # ------------------------------------------------------------------ #
-    # Forced finish util
-    # ------------------------------------------------------------------ #
-    async def _manually_finish_execution(self, message: str):
-        """
-        Push an xpfinish call through the agent in a worker thread so we
-        don’t block the event‑loop on synchronous SDK internals.
-        """
-        async def _push():
-            finish_call = ToolCall(
-                name="xpfinish-agent-execution-finished",
-                type=ToolCallType.XPANDER,
-                payload={
-                    "bodyParams": {"result": message, "is_success": False},
-                    "queryParams": {},
-                    "pathParams": {},
-                },
-            )
-            self.agent.run_tool(tool=finish_call)
-
-        await asyncio.to_thread(_push)
