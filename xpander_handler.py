@@ -46,7 +46,6 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
 
         # initialise task metadata (also blocking)
         await asyncio.to_thread(agent.init_task, execution=execution_task.model_dump())
-        raise Exception("Test")
 
         # --- run the CodingAgent -------------------------------------
         coding_agent = CodingAgent(agent=agent)
