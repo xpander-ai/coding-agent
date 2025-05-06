@@ -100,10 +100,6 @@ local_tools = [
                         "repo_url": {
                             "type": "string",
                             "description": "URL of the Git repository to clone"
-                        },
-                        "branch": {
-                            "type": "string",
-                            "description": "Optional branch to clone (default: main branch)"
                         }
                     },
                     "required": ["repo_url"]
