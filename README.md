@@ -78,6 +78,8 @@ cd agent-coding
 pip install -r requirements.txt
 
 cp .env.example .env   # add your OpenAI/Anthropic/Gemini keys + xpander creds
+xpander login
+xpander agent new
 python main.py         # launch the agent
 ```
 
