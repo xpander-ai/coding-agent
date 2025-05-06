@@ -76,7 +76,7 @@ Deploy a Bedrock dev agent alongside an OpenAI Codex agent, orchestrate them wit
 git clone https://github.com/xpander-ai/agent-coding.git
 cd agent-coding
 pip install -r requirements.txt
-
+npm install -g xpander-cli
 cp .env.example .env   # add your OpenAI/Anthropic/Gemini keys + xpander creds
 xpander login
 xpander agent new
