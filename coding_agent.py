@@ -8,7 +8,7 @@ import asyncio
 import inspect
 import time
 from os import getenv
-from typing import Optional, List, Dict, Any
+from typing import Literal, Optional, List, Dict, Any
 from loguru import logger
 from xpander_sdk import (
     Agent, LLMProvider,
@@ -17,10 +17,9 @@ from xpander_sdk import (
 )
 from local_tools import local_tools_by_name, local_tools_list
 import sandbox
-from loguru import logger
-
-from bedrock import AsyncBedrockProvider
+from llm_providers import AsyncBedrockProvider, AsyncOpenAIProvider
 from dotenv import load_dotenv
+
 load_dotenv()
 
 MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
@@ -29,32 +28,48 @@ MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
 
 class CodingAgent:
     """
-    Agent orchestrating LLM interaction + tool execution (async version).
+    Async CodingAgent implementation for xpander.ai.
+
+    Coordinates LLM interaction, manages reasoning steps, and executes both
+    local and cloud tools asynchronously. Enforces safety constraints and
+    token usage tracking.
+
+    Args:
+        agent (Agent): The xpander.ai Agent instance to operate.
+        llm_provider (Literal): The provider to use (OPEN_AI or AMAZON_BEDROCK).
     """
 
-    # Init and set defaults + settings
-    def __init__(self, agent: Agent) -> None:
+    def __init__(
+        self,
+        agent: Agent,
+        llm_provider: Literal[LLMProvider.AMAZON_BEDROCK, LLMProvider.OPEN_AI] = LLMProvider.AMAZON_BEDROCK,
+    ) -> None:
         self.agent = agent
+        self.llm_provider = llm_provider
 
-        # --- configure the xpander.ai agent object as before -----------
         self.agent.memory_strategy = MemoryStrategy.MOVING_WINDOW
-        
-        # async Bedrock client
-        self.model_endpoint = AsyncBedrockProvider()
-
-        # tool config
         self.agent.add_local_tools(local_tools_list)
-        self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
-        
-        self.tool_config = {
-            "tools": self.agent.get_tools(),
-            "toolChoice": {"any": {} if self.agent.tool_choice == "required" else False},
-        }
+        self.agent.select_llm_provider(llm_provider)
 
-    # Chat Public entry point
+        if llm_provider == LLMProvider.AMAZON_BEDROCK:
+            self.model_endpoint = AsyncBedrockProvider()
+        elif llm_provider == LLMProvider.OPEN_AI:
+            self.model_endpoint = AsyncOpenAIProvider()
+        else:
+            raise KeyError(f"LLM Provider {llm_provider} is not supported in this coding agent")
+
     async def chat(self, user_input: str, thread_id: Optional[str] = None) -> str:
         """
-        Add a task and run the async agent loop. Returns the memory thread id.
+        Public entry point for chat interaction.
+
+        Adds a user task to the agent memory and initiates the async reasoning loop.
+
+        Args:
+            user_input (str): User's input or instruction.
+            thread_id (Optional[str]): Memory thread to append to (if continuing a thread).
+
+        Returns:
+            str: The memory thread ID of the resulting agent run.
         """
         if thread_id:
             logger.info(f"🧠 Adding task to existing thread: {thread_id}")
@@ -63,26 +78,35 @@ class CodingAgent:
             logger.info("🧠 Adding task to a new thread")
             self.agent.add_task(input=user_input)
 
-        agent_thread = await self._agent_loop()      # ← awaits now
+        agent_thread = await self._agent_loop()
         logger.info("-" * 80)
         logger.info(f"🤖 Agent response: {agent_thread.result}")
         return agent_thread.memory_thread_id
 
-    # Internals
-    async def _call_model(self) -> Dict[str, Any]:
+    async def _call_model(self, tools: Optional[List[Dict]] = []) -> Dict[str, Any]:
         """
-        Invoke Bedrock through AsyncBedrockProvider – non‑blocking.
+        Internal helper to call the model endpoint.
+
+        Args:
+            tools (Optional[List[Dict]]): Tool specification for the model.
+
+        Returns:
+            Dict[str, Any]: Model response or error.
         """
         return await self.model_endpoint.invoke_model(
             messages=self.agent.messages,
             system_message=self.agent.memory.system_message,
             temperature=0.0,
-            tool_config=self.tool_config,
+            tools=tools,
+            tool_choice=self.agent.tool_choice,
         )
 
     async def _agent_loop(self):
         """
-        Core reasoning/execution loop – now async‑friendly.
+        Core async loop coordinating reasoning steps and tool execution.
+
+        Returns:
+            Any: The final agent thread result after loop completion.
         """
         step = 1
         logger.info("🪄 Starting Agent Loop")
@@ -91,102 +115,95 @@ class CodingAgent:
 
         while not self.agent.is_finished():
             sandbox.get_sandbox(self.agent.execution.memory_thread_id)
+            tools = self.agent.get_tools()
 
-            # ---------- AI‑safety step limit guardrails --------------
             if step > MAXIMUM_STEPS_SOFT_LIMIT:
                 logger.error("🔴 Step limit reached → asking agent to wrap up")
-                self.agent.add_messages(
-                    [
-                        {
-                            "role": "user",
-                            "content": (
-                                "⛔ STEP LIMIT HIT. Immediately invoke "
-                                "xpfinish-agent-execution-finished with a final "
-                                "result and `is_success=false`. Do NOTHING else."
-                            ),
-                        }
-                    ]
-                )
-
-                filtered_tools = [
-                    t
-                    for t in self.agent.get_tools()
+                self.agent.add_messages([
+                    {
+                        "role": "user",
+                        "content": (
+                            "⛔ STEP LIMIT HIT. Immediately invoke "
+                            "xpfinish-agent-execution-finished with a final "
+                            "result and `is_success=false`. Do NOTHING else."
+                        ),
+                    }
+                ])
+                tools = [
+                    t for t in tools
                     if t.get("toolSpec", {}).get("name") == "xpfinish-agent-execution-finished"
                 ]
-                self.tool_config = {"tools": filtered_tools, "toolChoice": {"any": {}}}
 
                 if step > MAXIMUM_STEPS_HARD_LIMIT:
                     logger.error("🔴 Hard limit reached → force finish")
-                    self.agent.stop_execution(is_success=False,result=
-                        ("This request was terminated automatically after "
-                        "reaching the agent's maximum step limit. "
-                        "Try breaking it into smaller, more focused requests.")
+                    self.agent.stop_execution(
+                        is_success=False,
+                        result=(
+                            "This request was terminated automatically after "
+                            "reaching the agent's maximum step limit. "
+                            "Try breaking it into smaller, more focused requests."
+                        )
                     )
                     break
 
-            # --------------------------------------------------------
             logger.info("-" * 80)
             logger.info(f"🔍 Step {step}")
 
-            response = await self._call_model()
+            response = await self._call_model(tools=tools)
 
-            if response.get("status") == "error":          # early‑exit on model failure
-                self.agent.stop_execution(is_success=False,result=response["result"])
+            if (
+                self.llm_provider == LLMProvider.AMAZON_BEDROCK
+                and self.model_endpoint.should_stop_running(response=response)
+            ):
+                self.agent.stop_execution(is_success=False, result=response["result"])
                 break
 
-            # -------- token accounting --------------------------------
-            usage = response["usage"]
-            execution_tokens.worker.completion_tokens += usage["outputTokens"]
-            execution_tokens.worker.prompt_tokens += usage["inputTokens"]
-            execution_tokens.worker.total_tokens += usage["totalTokens"]
+            step_usage = self.model_endpoint.handle_token_accounting(
+                execution_tokens=execution_tokens,
+                response=response,
+            )
 
-            # -------- update agent state ------------------------------
-            self.agent.add_messages(response)
+            llm_response = response.model_dump() if not isinstance(response, dict) else response
+            self.agent.add_messages(llm_response)
 
-            # report usage (cheap → keep sync)
             self.agent.report_execution_metrics(
-                llm_tokens=execution_tokens, ai_model="claude-3-7-sonnet"
+                llm_tokens=execution_tokens,
+                ai_model=self.model_endpoint.model_id,
             )
 
-            # -------- tool handling -----------------------------------
-            tool_calls = self.agent.extract_tool_calls(llm_response=response)
+            tool_calls = self.agent.extract_tool_calls(llm_response=llm_response)
 
-            # run cloud tools (off‑thread)
             cloud_tool_call_results = await asyncio.to_thread(
-                self.agent.run_tools, tool_calls=tool_calls
+                self.agent.run_tools,
+                tool_calls=tool_calls,
             )
 
-            # pending local tool calls
             local_tool_calls = await asyncio.to_thread(
-                self.agent.retrieve_pending_local_tool_calls, tool_calls=tool_calls
+                self.agent.retrieve_pending_local_tool_calls,
+                tool_calls=tool_calls,
             )
             cloud_tool_call_results[:] = [
-                c
-                for c in cloud_tool_call_results
+                c for c in cloud_tool_call_results
                 if c.tool_call_id not in {t.tool_call_id for t in local_tool_calls}
             ]
 
-            # run local tools in parallel (each in its own worker thread)
             local_tool_call_results = await self._execute_local_tools(local_tool_calls)
 
-            # attach results back to agent memory
             if local_tool_call_results:
                 self.agent.memory.add_tool_call_results(
-                    tool_call_results=local_tool_call_results
+                    tool_call_results=local_tool_call_results,
                 )
 
-            # pretty‑print outcomes
             for res in cloud_tool_call_results + local_tool_call_results:
                 emoji = "✅" if res.is_success else "❌"
                 logger.info(f"{emoji} {res.function_name}")
 
             logger.info(
-                f"🔢 Step {step} tokens used: {usage['totalTokens']} "
-                f"(output: {usage['outputTokens']}, input: {usage['inputTokens']})"
+                f"🔢 Step {step} tokens used: {step_usage.total_tokens} "
+                f"(output: {step_usage.completion_tokens}, input: {step_usage.prompt_tokens})"
             )
             step += 1
 
-        # ------------------ loop exit summary -------------------------
         logger.info(
             f"✨ Execution duration: {time.perf_counter() - execution_start_time:.2f} s"
         )
@@ -199,12 +216,15 @@ class CodingAgent:
         sandbox.sandboxes[self.agent.execution.memory_thread_id] = sandbox.current_sandbox
         return self.agent.retrieve_execution_result()
 
-    # ------------------------------------------------------------------ #
-    # Local‑tool helpers
-    # ------------------------------------------------------------------ #
     async def _execute_local_tools(self, local_tool_calls: List) -> List[ToolCallResult]:
         """
-        Run local tool invocations concurrently in the default ThreadPool.
+        Execute multiple local tools concurrently in thread pool.
+
+        Args:
+            local_tool_calls (List): List of local tool calls to run.
+
+        Returns:
+            List[ToolCallResult]: Results of executed local tools.
         """
         if not local_tool_calls:
             return []
@@ -217,9 +237,15 @@ class CodingAgent:
             logger.info(f"⚙️ Executed {len(results)} local tools in {time.time() - start:.2f} s")
         return results
 
-    async def _execute_local_tool(self, tool):
+    async def _execute_local_tool(self, tool) -> ToolCallResult:
         """
-        Execute a single local tool off‑thread; keep logs & error handling identical.
+        Execute a single local tool in a background thread.
+
+        Args:
+            tool: Tool object to be executed.
+
+        Returns:
+            ToolCallResult: Result object with success flag and output payload.
         """
         tool_start_time = time.time()
         logger.info(
@@ -228,18 +254,16 @@ class CodingAgent:
         )
 
         tool_call_result = ToolCallResult(
-            function_name=tool.name, tool_call_id=tool.tool_call_id, payload=tool.payload
+            function_name=tool.name,
+            tool_call_id=tool.tool_call_id,
+            payload=tool.payload,
         )
 
         def _run_tool():
-            """
-            Synchronous helper executed in a worker thread.
-            """
             original_func = local_tools_by_name.get(tool.name)
             if not original_func:
                 raise ValueError(f"Tool {tool.name} not found")
 
-            # sandboxify paths
             params = {
                 k: sandbox.get_sandbox(filepath=v)
                 if k in {"filepath", "directory", "target_dir", "cwd"} and isinstance(v, str)
@@ -247,7 +271,6 @@ class CodingAgent:
                 for k, v in tool.payload.items()
             }
 
-            # argument validation
             sig = inspect.signature(original_func)
             invalid = [k for k in params if k not in sig.parameters]
             if invalid:
@@ -263,7 +286,6 @@ class CodingAgent:
             is_ok, result_dict = await asyncio.to_thread(_run_tool)
             tool_call_result.is_success = result_dict.get("success", is_ok)
             tool_call_result.result = result_dict
-
         except Exception as exc:
             import traceback
 

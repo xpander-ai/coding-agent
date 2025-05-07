@@ -15,7 +15,7 @@ from xpander_utils.events import (
     AgentExecution,
     ExecutionStatus,
 )
-from xpander_sdk import XpanderClient
+from xpander_sdk import LLMProvider, XpanderClient
 from coding_agent import CodingAgent
 
 # Configuration & SDK setup (sync → thread‑offloaded where needed)
@@ -28,7 +28,7 @@ xpander_cfg: dict = json.loads(CFG_PATH.read_text())
 
 # xpander‑sdk is blocking; create the client in a worker thread
 xpander: XpanderClient = asyncio.run(
-    asyncio.to_thread(XpanderClient, api_key=xpander_cfg["api_key"])
+    asyncio.to_thread(XpanderClient, api_key=xpander_cfg["api_key"], base_url="https://inbound.stg.xpander.ai")
 )
 
 # Async execution handler
@@ -48,7 +48,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
         await asyncio.to_thread(agent.init_task, execution=execution_task.model_dump())
 
         # --- run the CodingAgent -------------------------------------
-        coding_agent = CodingAgent(agent=agent)
+        coding_agent = CodingAgent(agent=agent, llm_provider=LLMProvider.OPEN_AI)
         exec_status = await coding_agent._agent_loop()   # returns ExecutionResult
 
     except Exception as exc:
@@ -69,7 +69,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
 
 # Event listener registration
 
-listener = XpanderEventListener(**xpander_cfg)
+listener = XpanderEventListener(**xpander_cfg, base_url="https://inbound.stg.xpander.ai")
 listener.register(on_execution_request=on_execution_request)
 
 # The listener’s internal loop is usually started automatically after

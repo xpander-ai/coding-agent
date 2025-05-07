@@ -83,12 +83,34 @@ xpander agent new
 python main.py         # launch the agent
 ```
 
-### One‑Prompt Demo
+### One‑Prompt Demo (Amazon Bedrock)
 
 ```python
+import asyncio
 from coding_agent import CodingAgent
+from xpander_sdk import LLMProvider, XpanderClient
 
-agent = CodingAgent()
+xpander_client = await asyncio.to_thread(XpanderClient, api_key="YOUR-API-KEY") # TODO: remove base_url
+xpander_agent = await asyncio.to_thread(xpander_client.agents.get, agent_id="YOUR-AGENT-ID")
+
+agent = CodingAgent(agent=xpander_agent, llm_provider=LLMProvider.AMAZON_BEDROCK)
+thread = agent.chat(
+    "Clone https://github.com/xpander-ai/docs.git and add a 'Getting Started' tutorial"
+)
+agent.chat("Push the change on a new branch called getting-started", thread)
+```
+
+### One‑Prompt Demo (OpenAI)
+
+```python
+import asyncio
+from coding_agent import CodingAgent
+from xpander_sdk import LLMProvider, XpanderClient
+
+xpander_client = await asyncio.to_thread(XpanderClient, api_key="YOUR-API-KEY") # TODO: remove base_url
+xpander_agent = await asyncio.to_thread(xpander_client.agents.get, agent_id="YOUR-AGENT-ID")
+
+agent = CodingAgent(agent=xpander_agent, llm_provider=LLMProvider.OPEN_AI)
 thread = agent.chat(
     "Clone https://github.com/xpander-ai/docs.git and add a 'Getting Started' tutorial"
 )
