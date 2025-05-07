@@ -24,7 +24,6 @@ import logging
 load_dotenv()
 
 logging.basicConfig()
-logging.getLogger().setLevel(logging.WARN)
 
 MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
 MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))

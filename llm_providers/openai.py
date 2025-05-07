@@ -15,9 +15,8 @@ from xpander_sdk import LLMTokens, Tokens
 
 from .base import LLMProviderBase
 
-load_dotenv()
-
 def provider_check():
+    load_dotenv()
     # Ensure required secrets
     required_env_vars: List[str] = [
         "OPENAI_API_KEY",
