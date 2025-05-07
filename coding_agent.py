@@ -13,7 +13,7 @@ from loguru import logger
 from xpander_sdk import (
     Agent, LLMProvider,
     ToolCallResult, MemoryStrategy, LLMTokens,
-    Tokens, ToolCall, ToolCallType
+    Tokens
 )
 from local_tools import local_tools_by_name, local_tools_list
 import sandbox
@@ -38,13 +38,14 @@ class CodingAgent:
 
         # --- configure the xpander.ai agent object as before -----------
         self.agent.memory_strategy = MemoryStrategy.MOVING_WINDOW
-        self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
-
+        
         # async Bedrock client
         self.model_endpoint = AsyncBedrockProvider()
 
         # tool config
         self.agent.add_local_tools(local_tools_list)
+        self.agent.select_llm_provider(LLMProvider.AMAZON_BEDROCK)
+        
         self.tool_config = {
             "tools": self.agent.get_tools(),
             "toolChoice": {"any": {} if self.agent.tool_choice == "required" else False},
