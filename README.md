@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## <strong>Build, test, and deploy better AI agents — framework-agnostic, LLM-agnostic, and supercharged by <a href="https://xpander.ai" target="_blank">xpander.ai</a></strong>
+## <strong> Build your own Coding Agent — framework-agnostic, LLM-agnostic, and supercharged by <a href="https://xpander.ai" target="_blank">xpander.ai</a></strong>
 
 <div align="center">
 
@@ -20,17 +20,29 @@
 
 ---
 
-## Why Coding Agent?
+# What is Coding Agent?
 
-| ✅ Capability | 🚀 What it means for you |
-|--------------|--------------------------|
-| **Framework & LLM agnostic** | Speak directly to OpenAI, Anthropic, Gemini, Llama 3, Cohere… or wrap LangChain/LangGraph—your call. |
-| **MCP‑ready tooling** | Turn any HTTP endpoint into a function call via the open **Model Context Protocol**—models can act on real systems instantly. |
-| **Agent‑2‑Agent (A2A)** | Compose swarms of specialists that coordinate through xpander.ai’s Agent Graph—delegation, parallelism, retries, done. |
-| **Threaded memory** | Every session is a state machine: persistent, inspectable, replayable. |
-| **Minimal abstractions** | “Thin” on purpose: you keep full control of payloads, auth, and error handling. |
-| **Security by design** | Per‑thread sandboxed FS, strict path‑whitelisting, no arbitrary shell, audited commits. |
+The Coding Agent is an open-source, minimal implementation of an autonomous AI agent that can read, write, and commit code to a Git repository. It avoids abstractions and is vendor-agnostic, making it suitable for developers looking to understand or extend agent behavior directly.
 
+It’s designed to operate as a standalone agent or as part of a multi-agent system, where other agents can invoke it to handle specific coding tasks.
+
+The underlying LLM can be replaced in just two lines of code, allowing easy experimentation across different providers.
+
+## Why xpander.ai?
+
+| ✅ Capability                       | 🔍 Description                                                                 |
+|------------------------------------|--------------------------------------------------------------------------------|
+| **Framework & LLM agnostic**       | Works with OpenAI, Anthropic, Gemini, Llama 3, Cohere, and LangChain/LangGraph. |
+| **Unified memory**                 | Threaded state object supports persistent, structured memory across sessions.  |
+| **Agent-to-Agent protocol (A2A)**  | Built-in message passing with orchestration rules for structured multi-agent workflows. |
+| **Model Context Protocol (MCP)**   | Exposes tools as HTTP endpoints callable by models with full context support.  |
+| **Reliable tool execution**        | Deterministic tool runner with error handling, retries, and call tracing.      |
+| **Agentic RAG**                    | Optimized API call planning and caching to avoid redundant model/tool usage.   |
+| **Custom agent hosting**           | Run any agent using any model on dedicated workers, no framework lock-in.      |
+| **Interface layer**                | REST, Web UI, MCP, and webhook interfaces available by default.                |
+| **Secrets management**             | Built-in vault for securely storing API keys and credentials.                  |
+| **Low abstraction surface**        | Direct access to payloads, headers, memory, and execution logic.               |
+| **Security model**                 | Sandboxed FS, path whitelisting, no shell access, and auditable write ops.     |
 ---
 
 ## 🏗 Architecture (10 sec glance)
