@@ -17,17 +17,18 @@ from .base import LLMProviderBase
 
 load_dotenv()
 
-# Ensure required secrets
-required_env_vars: List[str] = [
-    "OPENAI_KEY",
-    "MAXIMUM_STEPS_SOFT_LIMIT",
-    "MAXIMUM_STEPS_HARD_LIMIT",
-    "OPENAI_MODEL",
-]
+def provider_check():
+    # Ensure required secrets
+    required_env_vars: List[str] = [
+        "OPENAI_API_KEY",
+        "MAXIMUM_STEPS_SOFT_LIMIT",
+        "MAXIMUM_STEPS_HARD_LIMIT",
+        "MODEL_ID",
+    ]
 
-missing = [v for v in required_env_vars if getenv(v) is None]
-if missing:
-    raise KeyError(f"Environment variables are missing: {missing}")
+    missing = [v for v in required_env_vars if getenv(v) is None]
+    if missing:
+        raise KeyError(f"Environment variables are missing: {missing}")
 
 
 class AsyncOpenAIProvider(LLMProviderBase):
@@ -39,14 +40,15 @@ class AsyncOpenAIProvider(LLMProviderBase):
     and token accounting for use in xpander.ai.
 
     Environment Variables:
-        OPENAI_KEY: API key to authenticate with OpenAI.
-        OPENAI_MODEL: Model identifier to use.
+        OPENAI_API_KEY: API key to authenticate with OpenAI.
+        MODEL_ID: Model identifier to use.
         MAXIMUM_STEPS_SOFT_LIMIT: Step limit used for AI guardrail messaging.
     """
 
     def __init__(self) -> None:
-        self.model_id = getenv("OPENAI_MODEL")
-        self.openai_key = getenv("OPENAI_KEY")
+        provider_check()
+        self.model_id = getenv("MODEL_ID")
+        self.openai_key = getenv("OPENAI_API_KEY")
 
         self.ai_safety = (
             f"If you have reached the maximum number of steps "
