@@ -23,7 +23,7 @@ def provider_check():
         "OPENAI_API_KEY",
         "MAXIMUM_STEPS_SOFT_LIMIT",
         "MAXIMUM_STEPS_HARD_LIMIT",
-        "MODEL_ID",
+        "OPENAI_MODEL_ID",
     ]
 
     missing = [v for v in required_env_vars if getenv(v) is None]
@@ -41,13 +41,13 @@ class AsyncOpenAIProvider(LLMProviderBase):
 
     Environment Variables:
         OPENAI_API_KEY: API key to authenticate with OpenAI.
-        MODEL_ID: Model identifier to use.
+        OPENAI_MODEL_ID: Model identifier to use.
         MAXIMUM_STEPS_SOFT_LIMIT: Step limit used for AI guardrail messaging.
     """
 
     def __init__(self) -> None:
         provider_check()
-        self.model_id = getenv("MODEL_ID")
+        self.model_id = getenv("OPENAI_MODEL_ID")
         self.openai_key = getenv("OPENAI_API_KEY")
 
         self.ai_safety = (

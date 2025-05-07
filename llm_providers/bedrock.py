@@ -23,7 +23,7 @@ def provider_check():
         "AWS_REGION",
         "MAXIMUM_STEPS_SOFT_LIMIT",
         "MAXIMUM_STEPS_HARD_LIMIT",
-        "MODEL_ID",
+        "BEDROCK_MODEL_ID",
     ]
     if not getenv("AWS_PROFILE"):
         required_env_vars += ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
@@ -50,7 +50,7 @@ class AsyncBedrockProvider(LLMProviderBase):
 
     def __init__(self) -> None:
         provider_check()
-        self.model_id = getenv("MODEL_ID")
+        self.model_id = getenv("BEDROCK_MODEL_ID")
         self.region = getenv("AWS_REGION")
         self.aws_profile = getenv("AWS_PROFILE")
         self.aws_session_token = getenv("AWS_SESSION_TOKEN")
