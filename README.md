@@ -1,4 +1,4 @@
-# 🚀 Coding Agent
+# 🚀 Open-Source Framework-Agnostic Coding Agent
 
 <div align="center">
 
@@ -189,25 +189,11 @@ asyncio.run(main())
 
 ---
 
-## 📚 Further reading
+# Roadmap
 
-| Guide | TL;DR |
-|-------|-------|
-| **[Quick‑start](https://docs.xpander.ai/docs/01-get-started/01-index)** | First 10 min with xpander.ai |
-| **[Agent‑2‑Agent Graph](https://docs.xpander.ai/docs/02-agent-builder/06-multi-agent-teams)** | Compose multi‑agent workflows |
-
----
-
-## 🛡 Security model (short version)
-
-1. **Per‑thread sandbox** – each run gets its own isolated filesystem.  
-2. **Path whitelists** – tools cannot touch paths outside the sandbox.  
-3. **No arbitrary shell** – only curated sub‑processes with resource limits.  
-4. **Audit log** – every tool call, request & response are persisted immutably.
-
-_For deeper details, see `docs/security.md`._
-
----
+- [ ] Add OpenAI's Codex as a tool
+- [ ] Add additional LLM Providers
+- [ ] Add Evals
 
 ## 📜 License
 
