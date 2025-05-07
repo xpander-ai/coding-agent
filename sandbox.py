@@ -137,7 +137,8 @@ def git_clone(repo_url: str, branch: Optional[str] = None, thread_id: Optional[s
         return {
             "success": result.returncode == 0,
             "message": result.stdout if result.returncode == 0 else result.stderr,
-            "directory": target_dir
+            "directory": target_dir,
+            "cloned_to": target_path if result.returncode == 0 else ""
         }
     except Exception as e:
         return {
@@ -350,3 +351,56 @@ def commit(message: str, branch_name: str, repository: Optional[str] = None, thr
         }
     except Exception as e:
         return {"success": False, "message": f"Error during commit process: {str(e)}"}
+
+def git_switch_branch(branch: str, path: Optional[str] = None, thread_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Switch to a different Git branch in the sandbox or specified path.
+
+    Args:
+        branch (str): Branch to switch to.
+        path (Optional[str]): Direct path to the Git working directory.
+        thread_id (Optional[str]): Thread identifier for fallback sandbox path.
+
+    Returns:
+        Dict[str, Any]: Operation result including success status and messages.
+    """
+    sandbox_path = path or get_sandbox_path(thread_id)
+
+    if not os.path.isdir(os.path.join(sandbox_path, ".git")):
+        return {
+            "success": False,
+            "message": "You need to clone a repo first"
+        }
+
+    try:
+        fetch_result = subprocess.run(
+            ["git", "fetch"],
+            cwd=sandbox_path,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if fetch_result.returncode != 0:
+            return {
+                "success": False,
+                "message": f"Failed to fetch branches: {fetch_result.stderr}"
+            }
+
+        result = subprocess.run(
+            ["git", "checkout", branch],
+            cwd=sandbox_path,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        return {
+            "success": result.returncode == 0,
+            "message": result.stdout if result.returncode == 0 else result.stderr
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error switching branch: {str(e)}"
+        }

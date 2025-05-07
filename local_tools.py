@@ -85,6 +85,20 @@ def commit(message: str, branch_name: str, repository: Optional[str] = None) -> 
     """
     return sandbox.commit(message, branch_name, repository)
 
+def git_switch_branch(branch: str, path: str) -> Dict[str, Any]:
+    """
+    Switch to a different Git branch in the given sandbox path.
+
+    Args:
+        branch (str): Branch to switch to.
+        path (str): Path to the Git working directory (sandbox).
+
+    Returns:
+        Dict[str, Any]: Dictionary with switch status and message.
+    """
+    return sandbox.git_switch_branch(branch, path)
+
+
 # === Local Tools Declarations ===
 
 local_tools = [
@@ -218,7 +232,33 @@ local_tools = [
             }
         },
         "fn": commit
+    },
+    {
+        "declaration": {
+            "type": "function",
+            "function": {
+                "name": "git_switch_branch",
+                "description": "Switch to a different Git branch in the sandbox",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "branch": {
+                            "type": "string",
+                            "description": "Name of the Git branch to switch to"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Path to the Git working directory (sandbox)"
+                        }
+                    },
+                    "required": ["branch", "path"]
+                }
+            }
+        },
+        "fn": git_switch_branch
     }
+
+
 ]
 
 local_tools_list = [tool['declaration'] for tool in local_tools]

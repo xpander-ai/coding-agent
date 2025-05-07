@@ -19,8 +19,12 @@ from local_tools import local_tools_by_name, local_tools_list
 import sandbox
 from llm_providers import AsyncBedrockProvider, AsyncOpenAIProvider
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.WARN)
 
 MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
 MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
@@ -42,7 +46,7 @@ class CodingAgent:
     def __init__(
         self,
         agent: Agent,
-        llm_provider: Literal[LLMProvider.AMAZON_BEDROCK, LLMProvider.OPEN_AI] = LLMProvider.AMAZON_BEDROCK,
+        llm_provider: Literal[LLMProvider.AMAZON_BEDROCK, LLMProvider.OPEN_AI] = LLMProvider.OPEN_AI,
     ) -> None:
         self.agent = agent
         self.llm_provider = llm_provider
@@ -115,36 +119,10 @@ class CodingAgent:
 
         while not self.agent.is_finished():
             sandbox.get_sandbox(self.agent.execution.memory_thread_id)
-            tools = self.agent.get_tools()
 
-            if step > MAXIMUM_STEPS_SOFT_LIMIT:
-                logger.error("🔴 Step limit reached → asking agent to wrap up")
-                self.agent.add_messages([
-                    {
-                        "role": "user",
-                        "content": (
-                            "⛔ STEP LIMIT HIT. Immediately invoke "
-                            "xpfinish-agent-execution-finished with a final "
-                            "result and `is_success=false`. Do NOTHING else."
-                        ),
-                    }
-                ])
-                tools = [
-                    t for t in tools
-                    if t.get("toolSpec", {}).get("name") == "xpfinish-agent-execution-finished"
-                ]
-
-                if step > MAXIMUM_STEPS_HARD_LIMIT:
-                    logger.error("🔴 Hard limit reached → force finish")
-                    self.agent.stop_execution(
-                        is_success=False,
-                        result=(
-                            "This request was terminated automatically after "
-                            "reaching the agent's maximum step limit. "
-                            "Try breaking it into smaller, more focused requests."
-                        )
-                    )
-                    break
+            tools, reached_limit = self.has_step_limit_been_hit(step=step)
+            if reached_limit:
+                break
 
             logger.info("-" * 80)
             logger.info(f"🔍 Step {step}")
@@ -300,3 +278,40 @@ class CodingAgent:
 
         logger.info(f"🔧 Tool {tool.name} completed in {time.time() - tool_start_time:.2f} s")
         return tool_call_result
+    
+    
+    def has_step_limit_been_hit(self, step: int) -> tuple[List[Dict], bool]:
+        tools = self.agent.get_tools()
+        
+        reached_limit = False
+
+        if step > MAXIMUM_STEPS_SOFT_LIMIT:
+            logger.error("🔴 Step limit reached → asking agent to wrap up")
+            self.agent.add_messages([
+                {
+                    "role": "user",
+                    "content": (
+                        "⛔ STEP LIMIT HIT. Immediately invoke "
+                        "xpfinish-agent-execution-finished with a final "
+                        "result and `is_success=false`. Do NOTHING else."
+                    ),
+                }
+            ])
+            tools = [
+                t for t in tools
+                if t.get("name", t.get("toolSpec", {}).get("name")) == "xpfinish-agent-execution-finished"
+            ]
+
+            if step > MAXIMUM_STEPS_HARD_LIMIT:
+                logger.error("🔴 Hard limit reached → force finish")
+                self.agent.stop_execution(
+                    is_success=False,
+                    result=(
+                        "This request was terminated automatically after "
+                        "reaching the agent's maximum step limit. "
+                        "Try breaking it into smaller, more focused requests."
+                    )
+                )
+                reached_limit = True
+        
+        return tools, reached_limit

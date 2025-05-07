@@ -88,7 +88,7 @@ class AsyncOpenAIProvider(LLMProviderBase):
         sys_msg = next((msg for msg in _messages if msg["role"] == "system"), None)
         if sys_msg:
             sys_msg["content"] += f"\n\n{self.ai_safety}"
-
+        
         params: Dict[str, Any] = {
             "model": self.model_id,
             "messages": _messages,
