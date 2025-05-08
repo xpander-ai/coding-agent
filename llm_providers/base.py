@@ -9,6 +9,9 @@ class LLMProviderBase:
     Provides interface methods for error handling, execution control,
     and token accounting, which can be extended by specific LLM provider implementations.
     """
+    
+    def __init__(self) -> None:
+        self.ensure_required_secrets()
 
     @staticmethod
     def _error_response(msg: str) -> Dict[str, str]:
@@ -46,4 +49,7 @@ class LLMProviderBase:
         Returns:
             LLMTokens: An object representing the processed token accounting data.
         """
+        pass
+    
+    def ensure_required_secrets():
         pass

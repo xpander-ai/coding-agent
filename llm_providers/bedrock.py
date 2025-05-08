@@ -17,21 +17,6 @@ from .base import LLMProviderBase
 
 load_dotenv()
 
-# Ensure required secrets
-required_env_vars: List[str] = [
-    "AWS_REGION",
-    "MAXIMUM_STEPS_SOFT_LIMIT",
-    "MAXIMUM_STEPS_HARD_LIMIT",
-    "MODEL_ID",
-]
-if not getenv("AWS_PROFILE"):
-    required_env_vars += ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-
-missing = [v for v in required_env_vars if getenv(v) is None]
-if missing:
-    raise KeyError(f"Environment variables are missing: {missing}")
-
-
 class AsyncBedrockProvider(LLMProviderBase):
     """
     Async Provider for Amazon Bedrock model API interactions.
@@ -48,6 +33,7 @@ class AsyncBedrockProvider(LLMProviderBase):
     """
 
     def __init__(self) -> None:
+        super()
         self.model_id = getenv("MODEL_ID")
         self.region = getenv("AWS_REGION")
         self.aws_profile = getenv("AWS_PROFILE")
@@ -64,6 +50,22 @@ class AsyncBedrockProvider(LLMProviderBase):
 
         self._client_cfg = Config(connect_timeout=300, read_timeout=300)
 
+    def ensure_required_secrets(self):
+        # Ensure required secrets
+        required_env_vars: List[str] = [
+            "AWS_REGION",
+            "MAXIMUM_STEPS_SOFT_LIMIT",
+            "MAXIMUM_STEPS_HARD_LIMIT",
+            "MODEL_ID",
+        ]
+        if not getenv("AWS_PROFILE"):
+            required_env_vars += ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+
+        missing = [v for v in required_env_vars if getenv(v) is None]
+        if missing:
+            raise KeyError(f"Environment variables are missing: {missing}")
+
+    
     async def invoke_model(
         self,
         messages: List[Dict[str, Any]],

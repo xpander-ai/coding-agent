@@ -17,19 +17,6 @@ from .base import LLMProviderBase
 
 load_dotenv()
 
-# Ensure required secrets
-required_env_vars: List[str] = [
-    "OPENAI_KEY",
-    "MAXIMUM_STEPS_SOFT_LIMIT",
-    "MAXIMUM_STEPS_HARD_LIMIT",
-    "OPENAI_MODEL",
-]
-
-missing = [v for v in required_env_vars if getenv(v) is None]
-if missing:
-    raise KeyError(f"Environment variables are missing: {missing}")
-
-
 class AsyncOpenAIProvider(LLMProviderBase):
     """
     Async Provider for OpenAI model API interactions.
@@ -45,6 +32,7 @@ class AsyncOpenAIProvider(LLMProviderBase):
     """
 
     def __init__(self) -> None:
+        super()
         self.model_id = getenv("OPENAI_MODEL")
         self.openai_key = getenv("OPENAI_KEY")
 
@@ -57,6 +45,20 @@ class AsyncOpenAIProvider(LLMProviderBase):
             f"with a smaller task. Do nothing else."
         )
 
+    def ensure_required_secrets():
+        # Ensure required secrets
+        required_env_vars: List[str] = [
+            "OPENAI_KEY",
+            "MAXIMUM_STEPS_SOFT_LIMIT",
+            "MAXIMUM_STEPS_HARD_LIMIT",
+            "OPENAI_MODEL",
+        ]
+
+        missing = [v for v in required_env_vars if getenv(v) is None]
+        if missing:
+            raise KeyError(f"Environment variables are missing: {missing}")
+
+    
     async def invoke_model(
         self,
         messages: List[Dict[str, Any]],

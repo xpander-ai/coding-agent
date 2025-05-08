@@ -6,7 +6,7 @@
 
 ![version](https://img.shields.io/badge/version-1.0.0-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/xpander-ai/agent-coding/pulls)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/xpander-ai/coding-agent/pulls)
 [![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289DA)](https://discord.gg/CUcp4WWh5g)
 [![Slack](https://img.shields.io/badge/Join%20our%20Slack%20community-Click%20here-4A154B)](https://join.slack.com/t/xpandercommunity/shared_invite/zt-2mt2xkxkz-omM7f~_h2jcuzFudrYtZQQ)
 
@@ -73,8 +73,8 @@ The underlying LLM can be replaced in just two lines of code, allowing easy expe
 > * AWS CLI config **or** access keys _(only if you use Bedrock tools)_
 
 ```bash
-git clone https://github.com/xpander-ai/agent-coding.git
-cd agent-coding
+git clone https://github.com/xpander-ai/coding-agent.git
+cd coding-agent
 
 # Install Python deps (virtualenv/conda recommended)
 pip install -r requirements.txt
