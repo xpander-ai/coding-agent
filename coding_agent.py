@@ -30,7 +30,7 @@ MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
 MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
 
 # Provider to use. Default OpenAI
-llm_provider = LLMProvider.OPEN_AI
+llm_provider = LLMProvider.AMAZON_BEDROCK
 
 class CodingAgent:
     """
