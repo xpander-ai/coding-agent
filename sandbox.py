@@ -278,79 +278,91 @@ def read_file(file_path: str, thread_id: Optional[str] = None) -> Dict[str, Any]
 
 def commit(message: str, branch_name: str, repository: Optional[str] = None, thread_id: Optional[str] = None) -> Dict[str, Any]:
     """
-    Commit changes and push to a new branch.
+    Commit changes and push to a branch. Creates the branch if it doesn't exist.
 
     Args:
         message (str): Commit message.
-        branch_name (str): Name of the new branch.
-        repository (Optional[str]): Specific repository to commit inside the sandbox.
-        thread_id (Optional[str]): Thread identifier.
+        branch_name (str): Name of the branch to commit to.
+        repository (Optional[str]): Repository name in the sandbox.
+        thread_id (Optional[str]): Thread identifier for sandbox context.
 
     Returns:
-        Dict[str, Any]: Commit operation result including branch and commit hash.
-
-    Notes:
-        - If Git user is not configured, sets user as "AI Agent" at xpander.ai.
+        Dict[str, Any]: Operation result, including commit hash and branch info.
     """
     sandbox_path = get_sandbox_path(thread_id)
 
     try:
-        git_dirs = {}
-        for item in os.listdir(sandbox_path):
-            item_path = os.path.join(sandbox_path, item)
-            if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, ".git")):
-                git_dirs[item] = item_path
+        # Discover git repositories in sandbox
+        git_dirs = {
+            item: os.path.join(sandbox_path, item)
+            for item in os.listdir(sandbox_path)
+            if os.path.isdir(os.path.join(sandbox_path, item)) and os.path.exists(os.path.join(sandbox_path, item, ".git"))
+        }
 
         if not git_dirs:
-            return {"success": False, "message": "No Git repositories found in the sandbox"}
+            return {"success": False, "message": "No Git repositories found in the sandbox."}
 
         if repository:
-            if repository in git_dirs:
-                repo_path = git_dirs[repository]
-                repo_name = repository
-            else:
+            if repository not in git_dirs:
                 return {
                     "success": False,
                     "message": f"Repository '{repository}' not found. Available: {', '.join(git_dirs.keys())}"
                 }
+            repo_name = repository
         else:
-            repo_name = next(iter(git_dirs.keys()))
-            repo_path = git_dirs[repo_name]
-            print(f"Warning: No repository specified, using '{repo_name}'.")
+            repo_name = next(iter(git_dirs))
+            print(f"Warning: No repository specified. Defaulting to '{repo_name}'.")
 
-        name_check = subprocess.run(["git", "config", "user.name"], cwd=repo_path, capture_output=True, text=True)
-        if name_check.returncode != 0 or not name_check.stdout.strip():
-            subprocess.run(["git", "config", "user.name", "AI Agent"], cwd=repo_path, check=True, capture_output=True)
+        repo_path = git_dirs[repo_name]
 
-        email_check = subprocess.run(["git", "config", "user.email"], cwd=repo_path, capture_output=True, text=True)
-        if email_check.returncode != 0 or not email_check.stdout.strip():
-            subprocess.run(["git", "config", "user.email", "agent@xpander.ai"], cwd=repo_path, check=True, capture_output=True)
+        # Ensure git user identity is set
+        def ensure_git_config(key: str, value: str):
+            result = subprocess.run(["git", "config", "--get", key], cwd=repo_path, capture_output=True, text=True)
+            if result.returncode != 0 or not result.stdout.strip():
+                subprocess.run(["git", "config", key, value], cwd=repo_path, check=True)
 
-        branch_result = subprocess.run(["git", "checkout", "-b", branch_name], cwd=repo_path, capture_output=True, text=True)
-        if branch_result.returncode != 0:
-            return {"success": False, "message": f"Failed to create branch: {branch_result.stderr}"}
+        ensure_git_config("user.name", "AI Agent")
+        ensure_git_config("user.email", "agent@xpander.ai")
 
-        add_result = subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True, text=True)
-        if add_result.returncode != 0:
-            return {"success": False, "message": f"Failed to add files: {add_result.stderr}"}
+        # Check if branch exists
+        check_branch = subprocess.run(
+            ["git", "rev-parse", "--verify", branch_name],
+            cwd=repo_path, capture_output=True, text=True
+        )
 
-        commit_result = subprocess.run(["git", "commit", "-m", message], cwd=repo_path, capture_output=True, text=True)
-        if commit_result.returncode != 0:
-            return {"success": False, "message": f"Failed to commit: {commit_result.stderr}"}
+        if check_branch.returncode == 0:
+            checkout = subprocess.run(["git", "checkout", branch_name], cwd=repo_path, capture_output=True, text=True)
+        else:
+            checkout = subprocess.run(["git", "checkout", "-b", branch_name], cwd=repo_path, capture_output=True, text=True)
 
-        push_result = subprocess.run(["git", "push", "origin", branch_name], cwd=repo_path, capture_output=True, text=True)
-        if push_result.returncode != 0:
-            return {"success": False, "message": f"Failed to push: {push_result.stderr}"}
+        if checkout.returncode != 0:
+            return {"success": False, "message": f"Failed to checkout/create branch '{branch_name}': {checkout.stderr.strip()}"}
+
+        # Stage all changes
+        add = subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True, text=True)
+        if add.returncode != 0:
+            return {"success": False, "message": f"Failed to stage files: {add.stderr.strip()}"}
+
+        # Commit
+        commit = subprocess.run(["git", "commit", "-m", message], cwd=repo_path, capture_output=True, text=True)
+        if commit.returncode != 0:
+            return {"success": False, "message": f"Commit failed: {commit.stderr.strip()}"}
+
+        # Push
+        push = subprocess.run(["git", "push", "-u", "origin", branch_name], cwd=repo_path, capture_output=True, text=True)
+        if push.returncode != 0:
+            return {"success": False, "message": f"Push failed: {push.stderr.strip()}"}
 
         return {
             "success": True,
-            "message": f"Successfully committed and pushed to branch {branch_name} in repository {repo_name}",
-            "commit_hash": commit_result.stdout.strip(),
+            "message": f"Successfully committed and pushed to branch '{branch_name}' in repository '{repo_name}'.",
+            "commit_hash": commit.stdout.strip(),
             "branch": branch_name,
             "repository": repo_name
         }
+
     except Exception as e:
-        return {"success": False, "message": f"Error during commit process: {str(e)}"}
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 def git_switch_branch(branch: str, path: Optional[str] = None, thread_id: Optional[str] = None) -> Dict[str, Any]:
     """
