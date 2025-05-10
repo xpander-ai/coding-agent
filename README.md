@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## <strong> Build your own Coding Agent — framework-agnostic, LLM-agnostic, and supercharged by <a href="https://xpander.ai" target="_blank">xpander.ai</a></strong>
+## <strong> Build your own Coding Agent; framework-agnostic, LLM-agnostic, and supercharged by the <a href="https://xpander.ai" target="_blank">xpander.ai</a></strong> agents platform
 
 ![version](https://img.shields.io/badge/version-1.0.0-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -16,9 +16,9 @@
 
 </div>
 
----
 
-# What is Coding Agent?
+
+# What is the xpander.ai Coding Agent?
 
 The Coding Agent is an open-source, minimal implementation of an autonomous AI agent that can read, write, and commit code to a Git repository. It avoids abstractions and is vendor-agnostic, making it suitable for developers looking to understand or extend agent behavior directly.
 
@@ -26,7 +26,7 @@ It’s designed to operate as a standalone agent or as part of a multi-agent sys
 
 The underlying LLM can be replaced in just two lines of code, allowing easy experimentation across different providers.
 
-## Why xpander.ai?
+## ✨ Key Features
 
 | ✅ Capability                       | 🔍 Description                                                                 |
 |------------------------------------|--------------------------------------------------------------------------------|
@@ -44,6 +44,8 @@ The underlying LLM can be replaced in just two lines of code, allowing easy expe
 ---
 
 ## 🏗 Architecture (10 sec glance)
+At a high level, the Coding Agent acts as an intermediary between your chosen LLM and a secure coding environment, and it can be orchestrated by other agents:
+
 
 ```
 ┌───────────────┐         ┌──────────────┐         ┌────────────────────┐
@@ -62,11 +64,11 @@ The underlying LLM can be replaced in just two lines of code, allowing easy expe
                           └─────────────────────────┘
 ```
 
----
 
-## ⚡ Quick start
 
-> **Pre‑reqs**  
+## Installation
+
+> **Prerequisites**  
 > * Python ≥ 3.10 (tested on 3.10 & 3.11)  
 > * Node ≥ 18 (for `xpander-cli`)  
 > * Git ≥ 2.34  
@@ -76,52 +78,61 @@ The underlying LLM can be replaced in just two lines of code, allowing easy expe
 git clone https://github.com/xpander-ai/coding-agent.git
 cd coding-agent
 
-# Install Python deps (virtualenv/conda recommended)
+# Install Python dependencies (use a virtualenv/conda for isolation)
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Install CLI for agent scaffolding & deployment
+# Install xpander CLI for agent scaffolding & deployment
 npm install -g xpander-cli
 ```
+⚡ Quick start
 
-### 1 · Authenticate once
+Once installed, you can scaffold a new Coding Agent and start using it in just a few steps:
+
+
+### 1 · Authenticate with xpander: Log in to your xpander.ai account (opens a browser for authentication):
 
 ```bash
 xpander login          # opens browser‑based auth
 ```
 
-### 2 · Scaffold a new agent
+### 2 · Scaffold a new agent: Create a new agent configuration using the CLI wizard (this will generate a local agent directory under ./agents/<your-agent-name>):
 
 ```bash
 xpander agent new      # interactive wizard → creates ./agents/<slug>
 ```
 
-### 3 · Configure `.env`
+### 3 · Configure your environment: Create a .env file in the project root (or update it if generated) with the required keys and settings:
 
 ```dotenv
-# AWS (optional – only for Bedrock)
+# AWS credentials (only if using Amazon Bedrock)
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_SESSION_TOKEN=...          # if using STS
 AWS_REGION=us-west-2           # or your region
 
-# xpander
+# xpander API key
 XPANDER_API_KEY=...
 
-# Coding Agent runtime
+# Coding Agent runtime settings
 MAX_STEPS_SOFT_LIMIT=40
 MAX_STEPS_HARD_LIMIT=60
 MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0
 ```
 
-### 4 · Chat locally
+### 4 · Run the agent locally: Start an interactive chat session with your new Coding Agent:
 
 ```bash
 python main.py
 ```
+You can now converse with the agent in your terminal. Type your requests (e.g. "Create a new Python file that prints 'Hello World'") and watch the agent autonomously write code, modify files, and commit changes based on your instructions. Use quit() or q to exit the session.
 
----
+
+
 
 ## 🖥  One‑Prompt Demos
+You can also interact with the Coding Agent programmatically using the xpander SDK. Below are simple examples (in Python) using two different LLM providers. Just replace YOUR_API_KEY and YOUR_AGENT_ID with your xpander API key and an agent ID (from the agent you scaffolded or one configured in the xpander platform):
 
 <details>
 <summary>Amazon Bedrock (SDK async)</summary>
@@ -167,9 +178,11 @@ asyncio.run(main())
 ```
 </details>
 
----
+
 
 ## 🔌 Built‑in tools
+Coding Agent comes with a suite of built-in tools to perform common development tasks in its sandbox:
+
 
 | Tool | What it does |
 |------|--------------|
@@ -180,21 +193,30 @@ asyncio.run(main())
 | `run_tests` | Execute tests inside sandbox |
 | `call_endpoint` | Invoke any MCP‑described REST/gRPC endpoint |
 
----
+These tools enable the agent to navigate repositories, make targeted code changes, and integrate with external services, all under controlled conditions. You can extend the agent with additional tools or endpoints as needed.
+
+
+
 
 ## 🧠 Memory & Orchestration
 
-* **Threads** – each chat is a JSON state machine (= GPT “history” you can inspect & replay).  
-* **Agent Graph** – declarative DAG that whitelists which tools run when → reliability & compliance by default.
 
----
+* **Threads** – Each conversation or task runs in a threaded state (essentially a JSON state machine). This is like an ongoing chat history that you can inspect or replay, ensuring the agent maintains context over multiple prompts.
+* **Agent Graph** – A declarative directed acyclic graph (DAG) defines which tools or steps can run at which stage. This ensures the agent only executes allowed actions in a controlled sequence, providing reliability and compliance by default.
+
 
 # Roadmap
 
-- [ ] Add OpenAI's Codex as a tool
-- [ ] Add additional LLM Providers
-- [ ] Add Evals
+- [ ] OpenAI Codex integration: Add OpenAI’s Codex as a coding tool for even smarter code completion.
+- [ ] More LLM providers: Expand support to additional LLMs (e.g. Azure OpenAI, local models, etc.).
+- [ ] Automated evals: Incorporate evaluation suites to benchmark agent performance on coding tasks.
+
+We’re continuously improving Coding Agent. Feel free to suggest features or vote on existing ideas in the issues!
+
+# Contributing
+
+Contributions are welcome! If you’d like to report a bug or propose a new feature, please open an issue. Pull requests are gladly accepted – check out the code and feel free to improve it. For major changes, it’s best to discuss via an issue first to ensure alignment with the project goals. Join our growing community on Discord and Slack to ask questions, share ideas, and collaborate with other developers and researchers building with xpander.ai agents.
 
 ## 📜 License
 
-MIT © 2025 Xpander Inc.
+This project is licensed under the MIT License. © 2025 Xpander Inc. Feel free to use, modify, and distribute this codebase in accordance with the license terms.
