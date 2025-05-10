@@ -238,13 +238,13 @@ local_tools = [
             "type": "function",
             "function": {
                 "name": "git_switch_branch",
-                "description": "Switch to a different Git branch in the sandbox",
+                "description": "Switch to a different Git branch in the sandbox. ONLY when continuing work on existing branch. never when creating a new branch",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "branch": {
                             "type": "string",
-                            "description": "Name of the Git branch to switch to"
+                            "description": "Name of the Git branch to switch to (EXISTING BRANCH ONLY!)"
                         },
                         "path": {
                             "type": "string",
