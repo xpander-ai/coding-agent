@@ -8,7 +8,7 @@ import asyncio
 import inspect
 import time
 from os import getenv
-from typing import Literal, Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from loguru import logger
 from xpander_sdk import (
     Agent, LLMProvider,
@@ -29,6 +29,8 @@ logging.getLogger().setLevel(logging.WARN)
 MAXIMUM_STEPS_SOFT_LIMIT = int(getenv("MAXIMUM_STEPS_SOFT_LIMIT", 3))
 MAXIMUM_STEPS_HARD_LIMIT = int(getenv("MAXIMUM_STEPS_HARD_LIMIT", 4))
 
+# Provider to use. Default OpenAI
+llm_provider = LLMProvider.OPEN_AI
 
 class CodingAgent:
     """
@@ -40,13 +42,11 @@ class CodingAgent:
 
     Args:
         agent (Agent): The xpander.ai Agent instance to operate.
-        llm_provider (Literal): The provider to use (OPEN_AI or AMAZON_BEDROCK).
     """
 
     def __init__(
         self,
-        agent: Agent,
-        llm_provider: Literal[LLMProvider.AMAZON_BEDROCK, LLMProvider.OPEN_AI] = LLMProvider.OPEN_AI,
+        agent: Agent
     ) -> None:
         self.agent = agent
         self.llm_provider = llm_provider
