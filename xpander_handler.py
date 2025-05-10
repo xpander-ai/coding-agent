@@ -15,7 +15,7 @@ from xpander_utils.events import (
     AgentExecution,
     ExecutionStatus,
 )
-from xpander_sdk import XpanderClient
+from xpander_sdk import XpanderClient, LLMProvider
 from coding_agent import CodingAgent
 
 # Configuration & SDK setup (sync → thread‑offloaded where needed)
@@ -48,7 +48,9 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
         await asyncio.to_thread(agent.init_task, execution=execution_task.model_dump())
 
         # --- run the CodingAgent -------------------------------------
-        coding_agent = CodingAgent(agent=agent)
+        # coding_agent = CodingAgent(agent=agent)
+        # coding_agent = CodingAgent(agent=agent, llm_provider=LLMProvider.AMAZON_BEDROCK)
+        coding_agent = CodingAgent(agent=agent, llm_provider=LLMProvider.OPEN_AI)
         exec_status = await coding_agent._agent_loop()   # returns ExecutionResult
 
     except Exception as exc:
