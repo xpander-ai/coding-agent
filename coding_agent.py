@@ -17,7 +17,8 @@ from xpander_sdk import (
 )
 from local_tools import local_tools_by_name, local_tools_list
 import sandbox
-from llm_providers import AsyncBedrockProvider, AsyncOpenAIProvider
+from llm_providers import AsyncOpenAIProvider ## OpenAI
+# from llm_providers import AsyncBedrockProvider ## Amazon Bedrock    
 from dotenv import load_dotenv
 import logging
 
@@ -46,7 +47,8 @@ class CodingAgent:
     def __init__(
         self,
         agent: Agent,
-        llm_provider: Literal[LLMProvider.AMAZON_BEDROCK, LLMProvider.OPEN_AI] = LLMProvider.OPEN_AI,
+        # llm_provider: Literal[LLMProvider.AMAZON_BEDROCK]
+        llm_provider: Literal[LLMProvider.OPEN_AI]
     ) -> None:
         self.agent = agent
         self.llm_provider = llm_provider
@@ -55,12 +57,10 @@ class CodingAgent:
         self.agent.add_local_tools(local_tools_list)
         self.agent.select_llm_provider(llm_provider)
 
-        if llm_provider == LLMProvider.AMAZON_BEDROCK:
-            self.model_endpoint = AsyncBedrockProvider()
-        elif llm_provider == LLMProvider.OPEN_AI:
+        # if llm_provider == LLMProvider.AMAZON_BEDROCK:
+        #     self.model_endpoint = AsyncBedrockProvider()
+        if llm_provider == LLMProvider.OPEN_AI:
             self.model_endpoint = AsyncOpenAIProvider()
-        else:
-            raise KeyError(f"LLM Provider {llm_provider} is not supported in this coding agent")
 
     async def chat(self, user_input: str, thread_id: Optional[str] = None) -> str:
         """
@@ -315,3 +315,4 @@ class CodingAgent:
                 reached_limit = True
         
         return tools, reached_limit
+

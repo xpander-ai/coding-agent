@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from xpander_sdk import XpanderClient
-from coding_agent import CodingAgent
+from coding_agent import CodingAgent, LLMProvider
 
 CONFIG_FILE = Path("xpander_config.json")
 
@@ -24,14 +24,15 @@ async def interactive_chat(agent):
     """
     Opens an interactive terminal chat without ever blocking the event‑loop.
     """
-    coding_agent = CodingAgent(agent=agent)
+    # coding_agent = CodingAgent(agent=agent, llm_provider=LLMProvider.AMAZON_BEDROCK) ## Amazon Bedrock 
+    coding_agent = CodingAgent(agent=agent, llm_provider=LLMProvider.OPEN_AI) ## OpenAI
 
     # First turn (creates the thread)
-    thread_id = await coding_agent.chat("hi")
+    thread_id = await coding_agent.chat("Hi!")
     
     # Subsequent turns – `input()` is run in a thread so we stay non‑blocking
     while True:
-        user_input = await asyncio.to_thread(input, "You: ")
+        user_input = await asyncio.to_thread(input, "\nYou (write 'quit()' or 'q' to exit): ")
         if user_input == "quit()" or user_input == "q":
             break
         await coding_agent.chat(user_input, thread_id)

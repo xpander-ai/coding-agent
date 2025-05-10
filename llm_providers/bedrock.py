@@ -27,14 +27,14 @@ class AsyncBedrockProvider(LLMProviderBase):
 
     Environment Variables:
         AWS_REGION: AWS region for Bedrock.
-        MODEL_ID: Identifier of the model to use.
+        BEDROCK_MODEL_ID: Identifier of the model to use.
         MAXIMUM_STEPS_SOFT_LIMIT: Step limit for AI execution safety.
         AWS_PROFILE / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: AWS credentials.
     """
 
     def __init__(self) -> None:
         super()
-        self.model_id = getenv("MODEL_ID")
+        self.model_id = getenv("BEDROCK_MODEL_ID")
         self.region = getenv("AWS_REGION")
         self.aws_profile = getenv("AWS_PROFILE")
         self.aws_session_token = getenv("AWS_SESSION_TOKEN")
@@ -56,7 +56,7 @@ class AsyncBedrockProvider(LLMProviderBase):
             "AWS_REGION",
             "MAXIMUM_STEPS_SOFT_LIMIT",
             "MAXIMUM_STEPS_HARD_LIMIT",
-            "MODEL_ID",
+            "BEDROCK_MODEL_ID",
         ]
         if not getenv("AWS_PROFILE"):
             required_env_vars += ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
